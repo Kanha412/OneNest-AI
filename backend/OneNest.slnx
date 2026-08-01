@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="OneNest.API/OneNest.API.csproj" />
+  <Project Path="OneNest.Application/OneNest.Application.csproj" />
+  <Project Path="OneNest.Domain/OneNest.Domain.csproj" />
+  <Project Path="OneNest.Infrastructure/OneNest.Infrastructure.csproj" />
+  <Project Path="OneNest.Tests/OneNest.Tests.csproj" />
+</Solution>

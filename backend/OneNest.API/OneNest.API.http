@@ -1,0 +1,6 @@
+@OneNest.API_HostAddress = http://localhost:5189
+
+GET {{OneNest.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
