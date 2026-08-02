@@ -1,0 +1,22 @@
+.container {
+  max-width: 700px;
+  margin: 60px auto;
+  padding: 20px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.card {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  background: #f7f7f7;
+}
+
+h1 {
+  color: #2563eb;
+}
+
+p {
+  margin: 10px 0;
+}

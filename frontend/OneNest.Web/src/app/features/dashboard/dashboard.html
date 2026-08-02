@@ -1,0 +1,20 @@
+<section class="page">
+  <h1>🏡 Dashboard</h1>
+
+  <p>Welcome to OneNest AI — your personal life hub.</p>
+
+  @if (health(); as health) {
+    <div class="card">
+      <h2>✅ Backend Connected</h2>
+
+      <p><strong>Status:</strong> {{ health.status }}</p>
+      <p><strong>Application:</strong> {{ health.application }}</p>
+      <p><strong>Version:</strong> {{ health.version }}</p>
+      <p><strong>UTC Time:</strong> {{ health.timestamp }}</p>
+    </div>
+  } @else {
+    <div class="card">
+      Connecting to backend...
+    </div>
+  }
+</section>

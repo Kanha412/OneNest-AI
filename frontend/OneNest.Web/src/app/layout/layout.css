@@ -1,0 +1,52 @@
+.layout {
+  display: flex;
+  min-height: 100dvh;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 20px 12px;
+  box-sizing: border-box;
+}
+
+.brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+  padding: 8px 12px 20px;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menu-item {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #d1d5db;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.menu-item:hover {
+  background: #374151;
+  color: #ffffff;
+}
+
+.menu-item.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.content {
+  flex: 1;
+  padding: 32px;
+  box-sizing: border-box;
+  background: #f9fafb;
+}
