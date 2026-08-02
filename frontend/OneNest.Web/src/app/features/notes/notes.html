@@ -1,4 +1,29 @@
 <section class="page">
-  <h1>Notes</h1>
-  <p>Capture and organize your notes here.</p>
+
+    <h1>Notes</h1>
+
+    @if(notes().length === 0){
+
+        <p>No notes yet.</p>
+
+    }
+
+    @else {
+
+        @for(note of notes(); track note.id){
+
+            <div class="card">
+
+                <h3>{{note.title}}</h3>
+
+                <p>{{note.content}}</p>
+
+                <small>{{note.createdAt}}</small>
+
+            </div>
+
+        }
+
+    }
+
 </section>

@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/backend/">
+    <Project Path="backend/OneNest.API/OneNest.API.csproj" />
+    <Project Path="backend/OneNest.Application/OneNest.Application.csproj" />
+    <Project Path="backend/OneNest.Domain/OneNest.Domain.csproj" />
+    <Project Path="backend/OneNest.Infrastructure/OneNest.Infrastructure.csproj" />
+  </Folder>
+</Solution>
