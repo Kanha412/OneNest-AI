@@ -19,14 +19,15 @@ public class NoteService : INoteService
     var notes = await _noteRepository.GetAllAsync();
 
     return notes.Select(note => new NoteResponse
-    {
-        Id = note.Id,
-        Title = note.Title,
-        Content = note.Content,
-        CreatedAt = note.CreatedAt,
-        IsPinned = note.IsPinned,
-        IsArchived = note.IsArchived
-    }).ToList();
+{
+    Id = note.Id,
+    Title = note.Title,
+    Content = note.Content,
+    CreatedAt = note.CreatedAt,
+    UpdatedAt = note.UpdatedAt,
+    IsPinned = note.IsPinned,
+    IsArchived = note.IsArchived
+}).ToList();
 }
 
     public async Task<NoteResponse> CreateAsync(CreateNoteRequest request)
@@ -42,14 +43,15 @@ public class NoteService : INoteService
     await _noteRepository.AddAsync(note);
 
     return new NoteResponse
-    {
-        Id = note.Id,
-        Title = note.Title,
-        Content = note.Content,
-        CreatedAt = note.CreatedAt,
-        IsPinned = note.IsPinned,
-        IsArchived = note.IsArchived
-    };
+{
+    Id = note.Id,
+    Title = note.Title,
+    Content = note.Content,
+    CreatedAt = note.CreatedAt,
+    UpdatedAt = note.UpdatedAt,
+    IsPinned = note.IsPinned,
+    IsArchived = note.IsArchived
+};
 }
 
     public async Task DeleteAsync(Guid id)
@@ -60,5 +62,42 @@ public class NoteService : INoteService
         return;
 
     await _noteRepository.DeleteAsync(note);
+}
+
+public async Task<NoteResponse?> UpdateAsync(Guid id, UpdateNoteRequest request)
+{
+    var note = await _noteRepository.GetByIdAsync(id);
+
+    if (note is null)
+        return null;
+
+    note.Title = request.Title;
+    note.Content = request.Content;
+    note.UpdatedAt = DateTime.UtcNow;
+
+    await _noteRepository.UpdateAsync(note);
+
+    return new NoteResponse
+    {
+        Id = note.Id,
+        Title = note.Title,
+        Content = note.Content,
+        CreatedAt = note.CreatedAt,
+        UpdatedAt = note.UpdatedAt,
+        IsPinned = note.IsPinned,
+        IsArchived = note.IsArchived
+    };
+}
+
+public async Task TogglePinAsync(Guid id)
+{
+    var note = await _noteRepository.GetByIdAsync(id);
+
+    if (note is null)
+        return;
+
+    note.IsPinned = !note.IsPinned;
+
+    await _noteRepository.UpdateAsync(note);
 }
 }

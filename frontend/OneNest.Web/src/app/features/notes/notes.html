@@ -1,29 +1,86 @@
 <section class="page">
 
-    <h1>Notes</h1>
+  <h1>Notes</h1>
 
-    @if(notes().length === 0){
+  <div class="search-container">
+    <input
+      type="text"
+      placeholder="Search notes..."
+      [value]="searchText()"
+      (input)="searchText.set($any($event.target).value)" />
+  </div>
 
-        <p>No notes yet.</p>
+  <form
+    [formGroup]="noteForm"
+    (ngSubmit)="saveNote()">
 
-    }
+    <div class="form-group">
+      <label>Title</label>
 
-    @else {
+      <input
+        type="text"
+        formControlName="title"
+        placeholder="Enter title">
+    </div>
 
-        @for(note of notes(); track note.id){
+    <div class="form-group">
+      <label>Content</label>
 
-            <div class="card">
+      <textarea
+        rows="5"
+        formControlName="content"
+        placeholder="Write your note">
+      </textarea>
+    </div>
 
-                <h3>{{note.title}}</h3>
+    <button type="submit">
+        {{ editingId() ? 'Update Note' : 'Save Note' }}
+    </button>
 
-                <p>{{note.content}}</p>
+  </form>
 
-                <small>{{note.createdAt}}</small>
+  <hr>
 
-            </div>
+  @for (note of filteredNotes(); track note.id) {
 
-        }
+    <div class="note-card">
 
-    }
+  <div class="note-header">
+
+    <h3>{{ note.title }}</h3>
+
+    <div class="actions">
+
+      <button
+    type="button"
+    class="pin-btn"
+    (click)="togglePin(note.id)">
+
+    {{ note.isPinned ? '📌' : '📍' }}
+
+</button>
+  <button
+    type="button"
+    class="edit-btn"
+    (click)="editNote(note)">
+    Edit
+  </button>
+
+  <button
+    type="button"
+    class="delete-btn"
+    (click)="deleteNote(note.id)">
+    Delete
+  </button>
+
+</div>
+
+  </div>
+
+  <p>{{ note.content }}</p>
+
+</div>
+
+  }
 
 </section>

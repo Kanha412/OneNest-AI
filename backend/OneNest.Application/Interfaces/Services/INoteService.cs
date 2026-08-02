@@ -9,4 +9,6 @@ public interface INoteService
     Task<NoteResponse> CreateAsync(CreateNoteRequest request);
 
     Task DeleteAsync(Guid id);
+    Task<NoteResponse?> UpdateAsync(Guid id, UpdateNoteRequest request);
+    Task TogglePinAsync(Guid id);
 }

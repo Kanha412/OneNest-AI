@@ -35,4 +35,23 @@ public class NotesController : ControllerBase
         await _noteService.DeleteAsync(id);
         return NoContent();
     }
+
+    [HttpPut("{id}")]
+public async Task<IActionResult> Update(Guid id, UpdateNoteRequest request)
+{
+    var note = await _noteService.UpdateAsync(id, request);
+
+    if (note == null)
+        return NotFound();
+
+    return Ok(note);
+}
+
+[HttpPatch("{id}/pin")]
+public async Task<IActionResult> TogglePin(Guid id)
+{
+    await _noteService.TogglePinAsync(id);
+
+    return NoContent();
+}
 }

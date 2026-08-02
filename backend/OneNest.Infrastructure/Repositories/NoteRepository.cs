@@ -22,9 +22,9 @@ public class NoteRepository : INoteRepository
     }
 
     public async Task<Note?> GetByIdAsync(Guid id)
-    {
-        return await _dbContext.Notes.FindAsync(id);
-    }
+{
+    return await _dbContext.Notes.FindAsync(id);
+}
 
     public async Task AddAsync(Note note)
     {
@@ -32,11 +32,11 @@ public class NoteRepository : INoteRepository
         await _dbContext.SaveChangesAsync();
     }
 
-    public async Task UpdateAsync(Note note)
-    {
-        _dbContext.Notes.Update(note);
-        await _dbContext.SaveChangesAsync();
-    }
+ public async Task UpdateAsync(Note note)
+{
+    _dbContext.Notes.Update(note);
+    await _dbContext.SaveChangesAsync();
+}
 
     public async Task DeleteAsync(Note note)
     {
