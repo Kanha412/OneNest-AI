@@ -20,6 +20,8 @@ public static class DependencyInjection
                 configuration.GetConnectionString("DefaultConnection")));
         services.AddScoped<INoteRepository, NoteRepository>();
         services.AddScoped<INoteService, NoteService>();
+        services.AddScoped<ITaskRepository, TaskRepository>();
+        services.AddScoped<ITaskService, TaskService>();
         return services;
     }
 }

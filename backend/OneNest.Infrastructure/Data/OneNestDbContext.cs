@@ -11,4 +11,5 @@ public class OneNestDbContext : DbContext
     }
 
     public DbSet<Note> Notes => Set<Note>();
+    public DbSet<TaskItem> Tasks => Set<TaskItem>();
 }
