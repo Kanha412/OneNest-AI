@@ -3,6 +3,10 @@
 
   <p>Welcome to OneNest AI — your personal life hub.</p>
 
+  @if (isLoading()) {
+    <app-spinner message="Loading your dashboard..." />
+  } @else {
+
   <div class="stats-grid">
 
     <div class="stat-card notes">
@@ -115,6 +119,175 @@
 
   }
 
+  @if (documents(); as docs) {
+
+    <h2 class="section-title">📁 Documents Vault</h2>
+
+    <div class="stats-grid">
+
+      <div class="stat-card notes">
+        <span class="stat-value">{{ totalDocuments() }}</span>
+        <span class="stat-label">Total Documents</span>
+        <span class="stat-sub">in your vault</span>
+      </div>
+
+      <div class="stat-card tasks">
+        <span class="stat-value">{{ todayUploads() }}</span>
+        <span class="stat-label">Today's Uploads</span>
+        <span class="stat-sub">uploaded today</span>
+      </div>
+
+      <div class="stat-card balance">
+        <span class="stat-value">{{ storageUsedLabel() }}</span>
+        <span class="stat-label">Storage Used</span>
+        <span class="stat-sub">total file size</span>
+      </div>
+
+      <div class="stat-card top-category">
+        <span class="stat-value">{{ docs.categoryDistribution.length }}</span>
+        <span class="stat-label">Categories Used</span>
+        <span class="stat-sub">distinct types</span>
+      </div>
+
+    </div>
+
+    <div class="charts-grid">
+
+      <div class="card chart-card">
+        <h3>Category Distribution</h3>
+        @if (docs.categoryDistribution.length) {
+          <div class="chart-wrap">
+            <app-chart type="doughnut" [data]="documentCategoryChartData()" />
+          </div>
+        } @else {
+          <p class="empty">No documents yet.</p>
+        }
+      </div>
+
+      <div class="card">
+        <h3>Recent Documents</h3>
+        @if (docs.recentDocuments.length) {
+          <ul class="recent-list">
+            @for (doc of docs.recentDocuments; track doc.id) {
+              <li class="recent-item">
+                <div>
+                  <strong>{{ documentIcon(doc.originalFileName, doc.contentType) }} {{ doc.title }}</strong>
+                  <small>{{ documentCategoryLabels[doc.category] }} · {{ doc.createdAt | date:'dd MMM yyyy' }}</small>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="empty">No documents yet.</p>
+        }
+      </div>
+
+    </div>
+
+  }
+
+  @if (healthHub(); as hub) {
+
+    <h2 class="section-title">🩺 Health Hub</h2>
+
+    <div class="stats-grid">
+
+      <div class="stat-card notes">
+        <span class="stat-value">{{ activeMedicines() }}</span>
+        <span class="stat-label">Active Medicines</span>
+        <span class="stat-sub">{{ hub.todayMedicines }} today · {{ expiringSoonMedicines() }} expiring soon</span>
+      </div>
+
+      <div class="stat-card tasks">
+        <span class="stat-value">{{ upcomingAppointments() }}</span>
+        <span class="stat-label">Upcoming Appointments</span>
+        <span class="stat-sub">{{ hub.pastAppointments }} past</span>
+      </div>
+
+      <div class="stat-card balance">
+        <span class="stat-value">{{ totalReports() }}</span>
+        <span class="stat-label">Medical Reports</span>
+        <span class="stat-sub">stored securely</span>
+      </div>
+
+      <div class="stat-card top-category">
+        <span class="stat-value">
+          {{ lastRecordUpdate() ? (lastRecordUpdate() | date:'dd MMM yyyy') : '—' }}
+        </span>
+        <span class="stat-label">Last Health Record</span>
+        <span class="stat-sub">last updated</span>
+      </div>
+
+    </div>
+
+    <div class="charts-grid">
+
+      <div class="card chart-card">
+        <h3>Medicine Distribution</h3>
+        @if (activeMedicines() > 0) {
+          <div class="chart-wrap">
+            <app-chart type="doughnut" [data]="medicineDistributionChartData()" />
+          </div>
+        } @else {
+          <p class="empty">No active medicines yet.</p>
+        }
+      </div>
+
+      <div class="card chart-card">
+        <h3>Appointment Timeline</h3>
+        @if (hub.appointmentTimeline.length) {
+          <div class="chart-wrap">
+            <app-chart type="bar" [data]="appointmentTimelineChartData()" />
+          </div>
+        } @else {
+          <p class="empty">No appointments yet.</p>
+        }
+      </div>
+
+    </div>
+
+    <div class="charts-grid">
+
+    <div class="card">
+      <h3>Upcoming Appointments</h3>
+      @if (upcomingAppointmentsList().length) {
+        <ul class="recent-list">
+          @for (appointment of upcomingAppointmentsList(); track appointment.id) {
+            <li class="recent-item">
+              <div>
+                <strong>{{ appointment.doctorName || '—' }}</strong>
+                <small>{{ appointment.specialty || appointment.hospital || '—' }} · {{ appointment.date | date:'dd MMM yyyy' }} {{ appointment.time }}</small>
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="empty">No upcoming appointments.</p>
+      }
+    </div>
+
+    <div class="card">
+      <h3>Recent Reports</h3>
+      @if (recentReports().length) {
+        <ul class="recent-list">
+          @for (report of recentReports(); track report.id) {
+            <li class="recent-item">
+              <div>
+                <strong>{{ report.title }}</strong>
+                <small>{{ report.doctorName || '—' }} · {{ report.reportDate | date:'dd MMM yyyy' }}</small>
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="empty">No reports yet.</p>
+      }
+    </div>
+
+    </div>
+
+  }
+
   @if (health(); as health) {
     <div class="card">
       <h2>✅ Backend Connected</h2>
@@ -128,5 +301,7 @@
     <div class="card">
       Connecting to backend...
     </div>
+  }
+
   }
 </section>

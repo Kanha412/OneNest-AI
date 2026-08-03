@@ -23,6 +23,8 @@ export class Layout {
     { label: 'Notes', path: 'notes' },
     { label: 'Tasks', path: 'tasks' },
     { label: 'Expenses', path: 'expenses' },
+    { label: 'Documents', path: 'documents' },
+    { label: 'Health', path: 'health' },
     { label: 'Settings', path: 'settings' }
   ];
 

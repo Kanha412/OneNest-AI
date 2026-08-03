@@ -25,6 +25,9 @@
 **/appsettings.Development.json
 **/appsettings.*.Local.json
 
+# Uploaded documents (stored on disk, not in git)
+**/uploads/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -1,0 +1,408 @@
+<section class="page">
+
+  <h1>Health Hub</h1>
+
+  <div class="tabs">
+    <button type="button" [class.active]="activeTab() === 'medicines'" (click)="setTab('medicines')">Medicines</button>
+    <button type="button" [class.active]="activeTab() === 'appointments'" (click)="setTab('appointments')">Appointments</button>
+    <button type="button" [class.active]="activeTab() === 'records'" (click)="setTab('records')">Health Record</button>
+    <button type="button" [class.active]="activeTab() === 'reports'" (click)="setTab('reports')">Reports</button>
+  </div>
+
+  <!-- ============ MEDICINES ============ -->
+  @if (activeTab() === 'medicines') {
+    <div class="tab-content">
+
+      <form [formGroup]="medicineForm" (ngSubmit)="saveMedicine()" class="form-grid">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" formControlName="name" placeholder="Medicine name"
+            [class.is-invalid]="medicineForm.controls.name.invalid && medicineForm.controls.name.touched">
+          @if (medicineForm.controls.name.invalid && medicineForm.controls.name.touched) {
+            <small class="field-error">Name is required.</small>
+          }
+        </div>
+
+        <div class="form-group">
+          <label>Dosage</label>
+          <input type="text" formControlName="dosage" placeholder="e.g. 500mg">
+        </div>
+
+        <div class="form-group">
+          <label>Frequency</label>
+          <input type="text" formControlName="frequency" placeholder="e.g. Twice a day">
+        </div>
+
+        <div class="form-group">
+          <label>Food Timing</label>
+          <select formControlName="foodTiming">
+            @for (t of foodTimings; track t) {
+              <option [ngValue]="t">{{ foodTimingLabels[t] }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Start Date</label>
+          <input type="date" formControlName="startDate">
+        </div>
+
+        <div class="form-group">
+          <label>End Date</label>
+          <input type="date" formControlName="endDate">
+        </div>
+
+        <div class="form-group span-2">
+          <label>When to take</label>
+          <div class="checkbox-row">
+            <label><input type="checkbox" formControlName="morning"> Morning</label>
+            <label><input type="checkbox" formControlName="afternoon"> Afternoon</label>
+            <label><input type="checkbox" formControlName="night"> Night</label>
+            <label><input type="checkbox" formControlName="isActive"> Active</label>
+          </div>
+        </div>
+
+        <div class="form-group span-2">
+          <label>Instructions</label>
+          <textarea rows="2" formControlName="instructions" placeholder="Optional instructions"></textarea>
+        </div>
+
+        <div class="form-actions span-2">
+          <button type="submit" [disabled]="medicineSaving()">
+            {{ medicineSaving() ? 'Saving...' : (editingMedicineId() ? 'Update Medicine' : 'Add Medicine') }}
+          </button>
+          @if (editingMedicineId()) {
+            <button type="button" class="secondary" (click)="cancelMedicineEdit()">Cancel</button>
+          }
+        </div>
+      </form>
+
+      <div class="filters">
+        <input type="text" placeholder="Search medicines..." [value]="medicineSearch()"
+          (input)="onMedicineSearch($any($event.target).value)">
+        <select (change)="onMedicineActiveFilter($any($event.target).value)">
+          <option value="all">All</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+
+      @if (medicinesLoading()) {
+        <app-spinner />
+      } @else {
+        @if (pagedMedicines().length === 0) {
+          <p class="empty">No medicines found.</p>
+        } @else {
+          <div class="card-grid">
+            @for (m of pagedMedicines(); track m.id) {
+              <div class="item-card">
+                <div class="card-top">
+                  <h3>{{ m.name }}</h3>
+                  <span class="badge" [class.badge-muted]="!m.isActive">
+                    {{ m.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
+                <small class="subtle">{{ m.dosage }} @if (m.frequency) { · {{ m.frequency }} }</small>
+                <div class="meta">
+                  <span>{{ timingBadges(m) }}</span>
+                  <span>{{ foodTimingLabels[m.foodTiming] }}</span>
+                </div>
+                <div class="meta">
+                  <span>{{ m.startDate | date:'dd MMM yyyy' }}</span>
+                  <span>@if (m.endDate) { → {{ m.endDate | date:'dd MMM yyyy' }} }</span>
+                </div>
+                @if (m.instructions) { <p>{{ m.instructions }}</p> }
+                <div class="actions">
+                  <button type="button" (click)="editMedicine(m)">Edit</button>
+                  <button type="button" class="danger" (click)="deleteMedicine(m)">Delete</button>
+                </div>
+              </div>
+            }
+          </div>
+          <app-paginator [page]="medicinePage()" [totalPages]="medicineTotalPages()"
+            (pageChange)="medicinePage.set($event)" />
+        }
+      }
+    </div>
+  }
+
+  <!-- ============ APPOINTMENTS ============ -->
+  @if (activeTab() === 'appointments') {
+    <div class="tab-content">
+
+      <form [formGroup]="appointmentForm" (ngSubmit)="saveAppointment()" class="form-grid">
+        <div class="form-group">
+          <label>Doctor Name</label>
+          <input type="text" formControlName="doctorName" placeholder="Doctor name"
+            [class.is-invalid]="appointmentForm.controls.doctorName.invalid && appointmentForm.controls.doctorName.touched">
+          @if (appointmentForm.controls.doctorName.invalid && appointmentForm.controls.doctorName.touched) {
+            <small class="field-error">Doctor name is required.</small>
+          }
+        </div>
+
+        <div class="form-group">
+          <label>Hospital / Clinic</label>
+          <input type="text" formControlName="hospital" placeholder="Hospital / clinic">
+        </div>
+
+        <div class="form-group">
+          <label>Specialty</label>
+          <input type="text" formControlName="specialty" placeholder="e.g. Cardiology">
+        </div>
+
+        <div class="form-group">
+          <label>Status</label>
+          <select formControlName="status">
+            @for (s of statuses; track s) {
+              <option [ngValue]="s">{{ statusLabels[s] }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" formControlName="date">
+        </div>
+
+        <div class="form-group">
+          <label>Time</label>
+          <input type="time" formControlName="time">
+        </div>
+
+        <div class="form-group span-2">
+          <label>Notes</label>
+          <textarea rows="2" formControlName="notes" placeholder="Optional notes"></textarea>
+        </div>
+
+        <div class="form-actions span-2">
+          <button type="submit" [disabled]="appointmentSaving()">
+            {{ appointmentSaving() ? 'Saving...' : (editingAppointmentId() ? 'Update Appointment' : 'Add Appointment') }}
+          </button>
+          @if (editingAppointmentId()) {
+            <button type="button" class="secondary" (click)="cancelAppointmentEdit()">Cancel</button>
+          }
+        </div>
+      </form>
+
+      <div class="filters">
+        <input type="text" placeholder="Search appointments..." [value]="appointmentSearch()"
+          (input)="onAppointmentSearch($any($event.target).value)">
+        <select (change)="onAppointmentStatusFilter($any($event.target).value)">
+          <option value="all">All Status</option>
+          @for (s of statuses; track s) {
+            <option [value]="s">{{ statusLabels[s] }}</option>
+          }
+        </select>
+      </div>
+
+      @if (appointmentsLoading()) {
+        <app-spinner />
+      } @else {
+        @if (pagedAppointments().length === 0) {
+          <p class="empty">No appointments found.</p>
+        } @else {
+          <div class="card-grid">
+            @for (a of pagedAppointments(); track a.id) {
+              <div class="item-card">
+                <div class="card-top">
+                  <h3>{{ a.doctorName }}</h3>
+                  <span class="badge" [class]="'badge ' + statusClass(a.status)">{{ statusLabels[a.status] }}</span>
+                </div>
+                <small class="subtle">{{ a.specialty }} @if (a.hospital) { · {{ a.hospital }} }</small>
+                <div class="meta">
+                  <span>{{ a.date | date:'dd MMM yyyy' }}</span>
+                  <span>{{ a.time?.substring(0, 5) }}</span>
+                </div>
+                @if (a.notes) { <p>{{ a.notes }}</p> }
+                <div class="actions">
+                  <button type="button" (click)="editAppointment(a)">Edit</button>
+                  <button type="button" class="danger" (click)="deleteAppointment(a)">Delete</button>
+                </div>
+              </div>
+            }
+          </div>
+          <app-paginator [page]="appointmentPage()" [totalPages]="appointmentTotalPages()"
+            (pageChange)="appointmentPage.set($event)" />
+        }
+      }
+    </div>
+  }
+
+  <!-- ============ HEALTH RECORD ============ -->
+  @if (activeTab() === 'records') {
+    <div class="tab-content">
+      @if (recordLoading()) {
+        <app-spinner />
+      } @else {
+        <form [formGroup]="recordForm" (ngSubmit)="saveRecord()" class="form-grid">
+          <div class="form-group">
+            <label>Blood Group</label>
+            <input type="text" formControlName="bloodGroup" placeholder="e.g. O+">
+          </div>
+          <div class="form-group">
+            <label>Height (cm)</label>
+            <input type="number" formControlName="heightCm" placeholder="e.g. 175">
+          </div>
+          <div class="form-group">
+            <label>Weight (kg)</label>
+            <input type="number" formControlName="weightKg" placeholder="e.g. 70">
+          </div>
+          <div class="form-group">
+            <label>Emergency Contact Name</label>
+            <input type="text" formControlName="emergencyContactName" placeholder="Contact name">
+          </div>
+          <div class="form-group">
+            <label>Emergency Contact Phone</label>
+            <input type="text" formControlName="emergencyContactPhone" placeholder="Phone number">
+          </div>
+          <div class="form-group span-2">
+            <label>Allergies</label>
+            <textarea rows="2" formControlName="allergies" placeholder="Known allergies"></textarea>
+          </div>
+          <div class="form-group span-2">
+            <label>Existing Conditions</label>
+            <textarea rows="2" formControlName="existingConditions" placeholder="Existing medical conditions"></textarea>
+          </div>
+          <div class="form-actions span-2">
+            <button type="submit" [disabled]="recordSaving()">
+              {{ recordSaving() ? 'Saving...' : (hasRecord() ? 'Update Record' : 'Save Record') }}
+            </button>
+          </div>
+        </form>
+      }
+    </div>
+  }
+
+  <!-- ============ REPORTS ============ -->
+  @if (activeTab() === 'reports') {
+    <div class="tab-content">
+
+      <form [formGroup]="reportForm" (ngSubmit)="saveReport()" class="form-grid">
+        @if (!editingReportId()) {
+          <div class="form-group span-2">
+            <label>File</label>
+            <input type="file" (change)="onReportFileSelected($event)">
+            @if (selectedReportFile()) {
+              <small class="file-hint">{{ selectedReportFile()!.name }} ({{ formatSize(selectedReportFile()!.size) }})</small>
+            }
+          </div>
+        }
+
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" formControlName="title" placeholder="Report title"
+            [class.is-invalid]="reportForm.controls.title.invalid && reportForm.controls.title.touched">
+          @if (reportForm.controls.title.invalid && reportForm.controls.title.touched) {
+            <small class="field-error">Title is required.</small>
+          }
+        </div>
+
+        <div class="form-group">
+          <label>Category</label>
+          <select formControlName="category">
+            @for (c of reportCategories; track c) {
+              <option [ngValue]="c">{{ reportCategoryLabels[c] }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Doctor</label>
+          <input type="text" formControlName="doctorName" placeholder="Doctor name">
+        </div>
+
+        <div class="form-group">
+          <label>Hospital</label>
+          <input type="text" formControlName="hospital" placeholder="Hospital / clinic">
+        </div>
+
+        <div class="form-group">
+          <label>Report Date</label>
+          <input type="date" formControlName="reportDate">
+        </div>
+
+        <div class="form-group span-2">
+          <label>Description</label>
+          <textarea rows="2" formControlName="description" placeholder="Optional description"></textarea>
+        </div>
+
+        <div class="form-actions span-2">
+          <button type="submit" [disabled]="reportSaving()">
+            {{ reportSaving() ? 'Saving...' : (editingReportId() ? 'Update Report' : 'Upload Report') }}
+          </button>
+          @if (editingReportId()) {
+            <button type="button" class="secondary" (click)="cancelReportEdit()">Cancel</button>
+          }
+        </div>
+      </form>
+
+      <div class="filters">
+        <input type="text" placeholder="Search reports..." [value]="reportSearch()"
+          (input)="onReportSearch($any($event.target).value)">
+        <select (change)="onReportCategoryFilter($any($event.target).value)">
+          <option value="all">All Categories</option>
+          @for (c of reportCategories; track c) {
+            <option [value]="c">{{ reportCategoryLabels[c] }}</option>
+          }
+        </select>
+      </div>
+
+      @if (reportsLoading()) {
+        <app-spinner />
+      } @else {
+        @if (pagedReports().length === 0) {
+          <p class="empty">No reports found.</p>
+        } @else {
+          <div class="card-grid">
+            @for (r of pagedReports(); track r.id) {
+              <div class="item-card">
+                <div class="card-top">
+                  <span class="doc-icon">{{ reportIcon(r) }}</span>
+                  <span class="badge">{{ reportCategoryLabels[r.category] }}</span>
+                </div>
+                <h3>{{ r.title }}</h3>
+                <small class="filename">{{ r.originalFileName }}</small>
+                <div class="meta">
+                  <span>{{ formatSize(r.fileSize) }}</span>
+                  <span>{{ r.reportDate | date:'dd MMM yyyy' }}</span>
+                </div>
+                @if (r.doctorName || r.hospital) {
+                  <small class="subtle">{{ r.doctorName }} @if (r.hospital) { · {{ r.hospital }} }</small>
+                }
+                @if (r.description) { <p>{{ r.description }}</p> }
+                <div class="actions">
+                  <button type="button" (click)="previewReport(r)">Preview</button>
+                  <button type="button" (click)="downloadReport(r)">Download</button>
+                  <button type="button" (click)="editReport(r)">Edit</button>
+                  <button type="button" class="danger" (click)="deleteReport(r)">Delete</button>
+                </div>
+              </div>
+            }
+          </div>
+          <app-paginator [page]="reportPage()" [totalPages]="reportTotalPages()"
+            (pageChange)="reportPage.set($event)" />
+        }
+      }
+    </div>
+  }
+
+  <!-- ============ PREVIEW MODAL ============ -->
+  @if (showPreview()) {
+    <div class="preview-overlay" (click)="closePreview()">
+      <div class="preview-box" (click)="$event.stopPropagation()">
+        <div class="preview-header">
+          <span>{{ previewName() }}</span>
+          <button type="button" (click)="closePreview()">✕</button>
+        </div>
+        <div class="preview-body">
+          @if (isImagePreview()) {
+            <img [src]="previewSafeUrl()" alt="preview">
+          } @else if (isPdfPreview()) {
+            <iframe [src]="previewSafeUrl()"></iframe>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+</section>

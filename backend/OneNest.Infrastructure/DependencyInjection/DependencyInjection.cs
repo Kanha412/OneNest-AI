@@ -6,11 +6,11 @@ using OneNest.Infrastructure.Data;
 using OneNest.Application.Interfaces.Repositories;
 using OneNest.Application.Interfaces.Security;
 using OneNest.Application.Interfaces.Services;
-using OneNest.Application.Services;
-using OneNest.Domain.Entities;
+using OneNest.Application.Interfaces.Storage;
+using OneNest.Application.Services;using OneNest.Domain.Entities;
 using OneNest.Infrastructure.Repositories;
 using OneNest.Infrastructure.Security;
-
+using OneNest.Infrastructure.Storage;
 namespace OneNest.Infrastructure;
 
 public static class DependencyInjection
@@ -28,6 +28,19 @@ public static class DependencyInjection
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<IExpenseRepository, ExpenseRepository>();
         services.AddScoped<IExpenseService, ExpenseService>();
+        services.AddScoped<IDocumentRepository, DocumentRepository>();
+        services.AddScoped<IDocumentService, DocumentService>();
+        services.AddSingleton<IFileStorageService, FileStorageService>();
+
+        services.AddScoped<IMedicineRepository, MedicineRepository>();
+        services.AddScoped<IMedicineService, MedicineService>();
+        services.AddScoped<IAppointmentRepository, AppointmentRepository>();
+        services.AddScoped<IAppointmentService, AppointmentService>();
+        services.AddScoped<IMedicalRecordRepository, MedicalRecordRepository>();
+        services.AddScoped<IMedicalRecordService, MedicalRecordService>();
+        services.AddScoped<IMedicalReportRepository, MedicalReportRepository>();
+        services.AddScoped<IMedicalReportService, MedicalReportService>();
+        services.AddScoped<IHealthSummaryService, HealthSummaryService>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAuthService, AuthService>();

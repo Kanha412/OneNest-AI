@@ -1,0 +1,193 @@
+<section class="page">
+
+  <h1>Documents</h1>
+
+  <div class="filters">
+
+    <input
+      type="text"
+      placeholder="Search documents..."
+      [value]="search()"
+      (input)="onSearch($any($event.target).value)" />
+
+    <select (change)="onCategoryFilter($any($event.target).value)">
+      <option value="all">All Categories</option>
+      @for (category of categories; track category) {
+        <option [value]="category">{{ categoryLabels[category] }}</option>
+      }
+    </select>
+
+    <select (change)="onSort($any($event.target).value)">
+      <option value="latest">Latest</option>
+      <option value="oldest">Oldest</option>
+      <option value="name">Name</option>
+      <option value="size">Size</option>
+    </select>
+
+  </div>
+
+  <form
+    [formGroup]="documentForm"
+    (ngSubmit)="saveDocument()">
+
+    @if (!editingId()) {
+      <div class="form-group">
+
+        <label>File</label>
+
+        <input
+          type="file"
+          (change)="onFileSelected($event)" />
+
+        @if (selectedFile()) {
+          <small class="file-hint">
+            {{ selectedFile()!.name }} ({{ formatSize(selectedFile()!.size) }})
+          </small>
+        }
+
+      </div>
+    }
+
+    <div class="form-group">
+
+      <label>Title</label>
+
+      <input
+        type="text"
+        formControlName="title"
+        placeholder="Enter title"
+        [class.is-invalid]="documentForm.controls.title.invalid && documentForm.controls.title.touched">
+
+      @if (documentForm.controls.title.invalid && documentForm.controls.title.touched) {
+        <small class="field-error">Title is required.</small>
+      }
+
+    </div>
+
+    <div class="form-group">
+
+      <label>Category</label>
+
+      <select formControlName="category">
+        @for (category of categories; track category) {
+          <option [ngValue]="category">{{ categoryLabels[category] }}</option>
+        }
+      </select>
+
+    </div>
+
+    <div class="form-group">
+
+      <label>Description</label>
+
+      <textarea
+        rows="2"
+        formControlName="description"
+        placeholder="Optional description">
+      </textarea>
+
+    </div>
+
+    <div class="form-actions">
+
+      <button
+        type="submit"
+        [disabled]="isSaving()">
+
+        {{ isSaving() ? 'Saving...' : (editingId() ? 'Update Document' : 'Upload Document') }}
+
+      </button>
+
+      @if (editingId()) {
+        <button
+          type="button"
+          class="secondary"
+          (click)="cancelEdit()">
+          Cancel
+        </button>
+      }
+
+    </div>
+
+  </form>
+
+  <hr>
+
+  @if (isLoading()) {
+    <app-spinner />
+  } @else {
+
+    <div class="doc-grid">
+
+      @for (doc of pagedDocuments(); track doc.id) {
+
+        <div class="doc-card">
+
+          <div class="doc-top">
+            <span class="doc-icon">{{ fileIcon(doc) }}</span>
+            <span class="category-badge">{{ categoryLabels[doc.category] }}</span>
+          </div>
+
+          <h3>{{ doc.title }}</h3>
+
+          <small class="filename">{{ doc.originalFileName }}</small>
+
+          <div class="meta">
+            <span>{{ formatSize(doc.fileSize) }}</span>
+            <span>{{ doc.createdAt | date:'dd MMM yyyy' }}</span>
+          </div>
+
+          @if (doc.description) {
+            <p>{{ doc.description }}</p>
+          }
+
+          <div class="actions">
+
+            <button type="button" (click)="preview(doc)">Preview</button>
+            <button type="button" (click)="download(doc)">Download</button>
+            <button type="button" (click)="editDocument(doc)">Edit</button>
+            <button type="button" class="danger" (click)="deleteDocument(doc.id)">Delete</button>
+
+          </div>
+
+        </div>
+
+      } @empty {
+
+        <p class="empty">No documents found.</p>
+
+      }
+
+    </div>
+
+    <app-paginator
+      [page]="currentPage()"
+      [totalPages]="totalPages()"
+      (pageChange)="currentPage.set($event)" />
+
+  }
+
+  @if (showPreview()) {
+    <div class="preview-overlay" (click)="closePreview()">
+      <div class="preview-box" (click)="$event.stopPropagation()">
+
+        <div class="preview-header">
+          <span>{{ previewName() }}</span>
+          <button type="button" (click)="closePreview()">✕</button>
+        </div>
+
+        <div class="preview-body">
+          @if (isImagePreview()) {
+            <img [src]="previewUrl()" [alt]="previewName()" />
+          } @else if (isPdfPreview()) {
+            <iframe [src]="previewSafeUrl()" title="PDF preview"></iframe>
+          } @else if (isTextPreview()) {
+            <iframe [src]="previewSafeUrl()" title="Text preview"></iframe>
+          }
+        </div>
+
+      </div>
+    </div>
+  }
+
+</section>

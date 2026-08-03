@@ -130,7 +130,7 @@ public class ExpenseService : IExpenseService
             RecentTransactions = expenses
                 .OrderByDescending(x => x.Date)
                 .ThenByDescending(x => x.CreatedAt)
-                .Take(5)
+                .Take(3)
                 .Select(MapToResponse)
                 .ToList(),
             CategoryBreakdown = categoryBreakdown,

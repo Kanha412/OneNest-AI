@@ -4,6 +4,8 @@ import { Dashboard } from './features/dashboard/dashboard';
 import { Notes } from './features/notes/notes';
 import { Tasks } from './features/tasks/tasks';
 import { Expenses } from './features/expenses/expenses';
+import { Documents } from './features/documents/documents';
+import { Health } from './features/health/health';
 import { Settings } from './features/settings/settings';
 import { Login } from './features/auth/login';
 import { Register } from './features/auth/register';
@@ -22,6 +24,8 @@ export const routes: Routes = [
       { path: 'notes', component: Notes },
       { path: 'tasks', component: Tasks },
       { path: 'expenses', component: Expenses },
+      { path: 'documents', component: Documents },
+      { path: 'health', component: Health },
       { path: 'settings', component: Settings }
     ]
   },

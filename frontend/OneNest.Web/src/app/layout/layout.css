@@ -1,6 +1,7 @@
 .layout {
   display: flex;
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -13,6 +14,9 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
 }
 
 .brand {
@@ -51,6 +55,8 @@
   padding: 32px;
   box-sizing: border-box;
   background: #f9fafb;
+  height: 100dvh;
+  overflow-y: auto;
 }
 
 .sidebar-footer {
