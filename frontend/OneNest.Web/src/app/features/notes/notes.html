@@ -43,11 +43,24 @@
       }
     </div>
 
-    <button
-      type="submit"
-      [disabled]="noteForm.invalid || isSaving()">
-        {{ isSaving() ? 'Saving...' : (editingId() ? 'Update Note' : 'Save Note') }}
-    </button>
+    <div class="form-actions">
+
+      <button
+        type="submit"
+        [disabled]="noteForm.invalid || isSaving()">
+          {{ isSaving() ? 'Saving...' : (editingId() ? 'Update Note' : 'Save Note') }}
+      </button>
+
+      @if (editingId()) {
+        <button
+          type="button"
+          class="secondary"
+          (click)="cancelEdit()">
+          Cancel
+        </button>
+      }
+
+    </div>
 
   </form>
 

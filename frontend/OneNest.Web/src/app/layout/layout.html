@@ -12,6 +12,16 @@
         </a>
       }
     </nav>
+
+    <div class="sidebar-footer">
+      @if (currentUser(); as user) {
+        <div class="user-info">
+          <span class="user-name">{{ user.fullName }}</span>
+          <span class="user-email">{{ user.email }}</span>
+        </div>
+      }
+      <button class="logout-btn" type="button" (click)="logout()">Logout</button>
+    </div>
   </aside>
 
   <main class="content">

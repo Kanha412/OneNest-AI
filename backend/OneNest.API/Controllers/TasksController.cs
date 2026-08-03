@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OneNest.Application.DTOs.Tasks;
 using OneNest.Application.Interfaces.Services;
@@ -5,6 +6,7 @@ using OneNest.Application.Interfaces.Services;
 namespace OneNest.API.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class TasksController : ControllerBase
 {

@@ -233,6 +233,16 @@ editTask(task:TaskItem){
 
 }
 
+cancelEdit(){
+
+    this.editingId.set(null);
+
+    this.taskForm.reset({
+        priority:2
+    });
+
+}
+
 toggleComplete(id:string){
 
     this.service

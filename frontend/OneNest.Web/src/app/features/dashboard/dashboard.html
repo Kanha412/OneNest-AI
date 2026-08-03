@@ -3,6 +3,118 @@
 
   <p>Welcome to OneNest AI — your personal life hub.</p>
 
+  <div class="stats-grid">
+
+    <div class="stat-card notes">
+      <span class="stat-value">{{ totalNotes() }}</span>
+      <span class="stat-label">Total Notes</span>
+      <span class="stat-sub">{{ pinnedNotes() }} pinned</span>
+    </div>
+
+    <div class="stat-card tasks">
+      <span class="stat-value">{{ totalTasks() }}</span>
+      <span class="stat-label">Total Tasks</span>
+      <span class="stat-sub">{{ pendingTasks() }} pending</span>
+    </div>
+
+    <div class="stat-card done">
+      <span class="stat-value">{{ completedTasks() }}</span>
+      <span class="stat-label">Completed</span>
+      <span class="stat-sub">tasks finished</span>
+    </div>
+
+    <div class="stat-card overdue">
+      <span class="stat-value">{{ overdueTasks() }}</span>
+      <span class="stat-label">Overdue</span>
+      <span class="stat-sub">need attention</span>
+    </div>
+
+  </div>
+
+  @if (finance(); as finance) {
+
+    <h2 class="section-title">💰 Finance Overview</h2>
+
+    <div class="stats-grid">
+
+      <div class="stat-card income">
+        <span class="stat-value">₹{{ finance.totalIncome | number:'1.2-2' }}</span>
+        <span class="stat-label">Total Income</span>
+        <span class="stat-sub">₹{{ finance.thisMonthIncome | number:'1.2-2' }} this month</span>
+      </div>
+
+      <div class="stat-card expense">
+        <span class="stat-value">₹{{ finance.totalExpense | number:'1.2-2' }}</span>
+        <span class="stat-label">Total Expense</span>
+        <span class="stat-sub">₹{{ finance.thisMonthExpense | number:'1.2-2' }} this month</span>
+      </div>
+
+      <div class="stat-card balance">
+        <span class="stat-value">₹{{ finance.currentBalance | number:'1.2-2' }}</span>
+        <span class="stat-label">Current Balance</span>
+        <span class="stat-sub">income − expense</span>
+      </div>
+
+      <div class="stat-card top-category">
+        <span class="stat-value">{{ topCategoryLabel() }}</span>
+        <span class="stat-label">Top Expense Category</span>
+        <span class="stat-sub">most spent on</span>
+      </div>
+
+    </div>
+
+    <div class="charts-grid">
+
+      <div class="card chart-card">
+        <h3>Category-wise Expenses</h3>
+        @if (finance.categoryBreakdown.length) {
+          <div class="chart-wrap">
+            <app-chart type="pie" [data]="categoryChartData()" />
+          </div>
+        } @else {
+          <p class="empty">No expense data yet.</p>
+        }
+      </div>
+
+      <div class="card chart-card">
+        <h3>Monthly Income vs Expense</h3>
+        @if (finance.monthlyBreakdown.length) {
+          <div class="chart-wrap">
+            <app-chart type="bar" [data]="monthlyChartData()" />
+          </div>
+        } @else {
+          <p class="empty">No monthly data yet.</p>
+        }
+      </div>
+
+    </div>
+
+    <div class="card">
+      <h3>Recent Transactions</h3>
+      @if (finance.recentTransactions.length) {
+        <ul class="recent-list">
+          @for (tx of finance.recentTransactions; track tx.id) {
+            <li class="recent-item">
+              <div>
+                <strong>{{ tx.title }}</strong>
+                <small>{{ categoryLabels[tx.category] }} · {{ tx.date | date:'dd MMM yyyy' }}</small>
+              </div>
+              <span
+                class="recent-amount"
+                [class.income]="tx.transactionType === TransactionType.Income"
+                [class.expense]="tx.transactionType === TransactionType.Expense">
+                {{ tx.transactionType === TransactionType.Income ? '+' : '-' }}₹{{ tx.amount | number:'1.2-2' }}
+              </span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="empty">No transactions yet.</p>
+      }
+    </div>
+
+  }
+
   @if (health(); as health) {
     <div class="card">
       <h2>✅ Backend Connected</h2>

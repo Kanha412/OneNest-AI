@@ -1,6 +1,18 @@
 /* Tasks — feature-specific styles.
    Shared form / button / layout styles come from global styles.css */
 
+.form-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.form-actions .secondary {
+  background: var(--color-surface);
+  color: var(--color-text-label);
+  border: 1px solid var(--color-border);
+}
+
 .task-card {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);

@@ -88,13 +88,26 @@
 
     </div>
 
-    <button
-      type="submit"
-      [disabled]="taskForm.invalid || isSaving()">
+    <div class="form-actions">
 
-      {{ isSaving() ? 'Saving...' : (editingId() ? 'Update Task' : 'Add Task') }}
+      <button
+        type="submit"
+        [disabled]="taskForm.invalid || isSaving()">
 
-    </button>
+        {{ isSaving() ? 'Saving...' : (editingId() ? 'Update Task' : 'Add Task') }}
+
+      </button>
+
+      @if (editingId()) {
+        <button
+          type="button"
+          class="secondary"
+          (click)="cancelEdit()">
+          Cancel
+        </button>
+      }
+
+    </div>
 
   </form>
 

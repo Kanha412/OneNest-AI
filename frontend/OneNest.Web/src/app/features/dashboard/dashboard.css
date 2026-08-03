@@ -10,3 +10,136 @@
 .page p {
   color: #4b5563;
 }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+  margin: var(--space-5) 0 var(--space-6);
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-card.notes {
+  border-left-color: var(--color-primary);
+}
+
+.stat-card.tasks {
+  border-left-color: var(--color-warning);
+}
+
+.stat-card.done {
+  border-left-color: var(--color-success);
+}
+
+.stat-card.overdue {
+  border-left-color: var(--color-danger);
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.stat-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-label);
+}
+
+.stat-sub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.stat-card.income {
+  border-left-color: var(--color-success);
+}
+
+.stat-card.expense {
+  border-left-color: var(--color-danger);
+}
+
+.stat-card.balance {
+  border-left-color: var(--color-primary);
+}
+
+.stat-card.top-category {
+  border-left-color: var(--color-warning);
+}
+
+.section-title {
+  margin: var(--space-6) 0 0;
+  color: var(--color-text);
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+  margin: var(--space-5) 0;
+}
+
+.chart-card h3 {
+  margin-top: 0;
+}
+
+.chart-wrap {
+  position: relative;
+  height: 260px;
+}
+
+.recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.recent-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.recent-item:last-child {
+  border-bottom: none;
+}
+
+.recent-item small {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.recent-amount {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.recent-amount.income {
+  color: var(--color-success-text, #15803d);
+}
+
+.recent-amount.expense {
+  color: var(--color-danger, #dc2626);
+}
+
+.empty {
+  color: var(--color-text-muted);
+  text-align: center;
+  margin: var(--space-4) 0;
+}

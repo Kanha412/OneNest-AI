@@ -4,9 +4,9 @@ namespace OneNest.Application.Interfaces.Repositories;
 
 public interface INoteRepository
 {
-    Task<List<Note>> GetAllAsync();
+    Task<List<Note>> GetAllAsync(Guid userId);
 
-    Task<Note?> GetByIdAsync(Guid id);
+    Task<Note?> GetByIdAsync(Guid id, Guid userId);
 
     Task AddAsync(Note note);
 

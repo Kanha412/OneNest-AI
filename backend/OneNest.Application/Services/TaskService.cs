@@ -1,5 +1,6 @@
 using OneNest.Application.DTOs.Tasks;
 using OneNest.Application.Interfaces.Repositories;
+using OneNest.Application.Interfaces.Security;
 using OneNest.Application.Interfaces.Services;
 using OneNest.Domain.Entities;
 
@@ -8,15 +9,17 @@ namespace OneNest.Application.Services;
 public class TaskService : ITaskService
 {
     private readonly ITaskRepository _taskRepository;
+    private readonly ICurrentUserService _currentUserService;
 
-    public TaskService(ITaskRepository taskRepository)
+    public TaskService(ITaskRepository taskRepository, ICurrentUserService currentUserService)
     {
         _taskRepository = taskRepository;
+        _currentUserService = currentUserService;
     }
 
     public async Task<List<TaskResponse>> GetAllAsync()
     {
-        var tasks = await _taskRepository.GetAllAsync();
+        var tasks = await _taskRepository.GetAllAsync(_currentUserService.UserId);
 
         return tasks.Select(task => new TaskResponse
         {
@@ -41,6 +44,7 @@ public class TaskService : ITaskService
             Description = request.Description,
             DueDate = request.DueDate,
             Priority = request.Priority,
+            UserId = _currentUserService.UserId,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -60,7 +64,7 @@ public class TaskService : ITaskService
 
     public async Task<TaskResponse?> UpdateAsync(Guid id, UpdateTaskRequest request)
     {
-        var task = await _taskRepository.GetByIdAsync(id);
+        var task = await _taskRepository.GetByIdAsync(id, _currentUserService.UserId);
 
         if (task is null)
             return null;
@@ -89,7 +93,7 @@ public class TaskService : ITaskService
 
     public async Task DeleteAsync(Guid id)
     {
-        var task = await _taskRepository.GetByIdAsync(id);
+        var task = await _taskRepository.GetByIdAsync(id, _currentUserService.UserId);
 
         if (task is null)
             return;
@@ -99,7 +103,7 @@ public class TaskService : ITaskService
 
     public async Task ToggleCompleteAsync(Guid id)
     {
-        var task = await _taskRepository.GetByIdAsync(id);
+        var task = await _taskRepository.GetByIdAsync(id, _currentUserService.UserId);
 
         if (task is null)
             return;

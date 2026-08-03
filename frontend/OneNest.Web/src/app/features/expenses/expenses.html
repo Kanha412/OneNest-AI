@@ -1,4 +1,240 @@
 <section class="page">
+
   <h1>Expenses</h1>
-  <p>Monitor your spending and budgets.</p>
+
+  <div class="filters">
+
+    <input
+      type="text"
+      placeholder="Search expenses..."
+      [value]="search()"
+      (input)="onSearch($any($event.target).value)" />
+
+    <select (change)="onCategoryFilter($any($event.target).value)">
+      <option value="all">All Categories</option>
+      @for (category of categories; track category) {
+        <option [value]="category">{{ categoryLabels[category] }}</option>
+      }
+    </select>
+
+    <select (change)="onTypeFilter($any($event.target).value)">
+      <option value="all">All Types</option>
+      <option [value]="TransactionType.Income">Income</option>
+      <option [value]="TransactionType.Expense">Expense</option>
+    </select>
+
+    <select (change)="onSort($any($event.target).value)">
+      <option value="latest">Latest</option>
+      <option value="oldest">Oldest</option>
+      <option value="highest">Highest Amount</option>
+      <option value="lowest">Lowest Amount</option>
+    </select>
+
+  </div>
+
+  <form
+    [formGroup]="expenseForm"
+    (ngSubmit)="saveExpense()">
+
+    <div class="form-group">
+
+      <label>Title</label>
+
+      <input
+        type="text"
+        formControlName="title"
+        placeholder="Enter title"
+        [class.is-invalid]="expenseForm.controls.title.invalid && expenseForm.controls.title.touched">
+
+      @if (expenseForm.controls.title.invalid && expenseForm.controls.title.touched) {
+        <small class="field-error">Title is required.</small>
+      }
+
+    </div>
+
+    <div class="row">
+
+      <div class="form-group">
+
+        <label>Amount (₹)</label>
+
+        <input
+          type="number"
+          step="0.01"
+          formControlName="amount"
+          placeholder="0.00"
+          [class.is-invalid]="expenseForm.controls.amount.invalid && expenseForm.controls.amount.touched">
+
+        @if (expenseForm.controls.amount.touched && expenseForm.controls.amount.hasError('required')) {
+          <small class="field-error">Amount is required.</small>
+        }
+
+        @if (expenseForm.controls.amount.hasError('min')) {
+          <small class="field-error">Amount must be greater than 0.</small>
+        }
+
+      </div>
+
+      <div class="form-group">
+
+        <label>Date</label>
+
+        <input
+          type="date"
+          formControlName="date"
+          [class.is-invalid]="expenseForm.controls.date.invalid && expenseForm.controls.date.touched">
+
+        @if (expenseForm.controls.date.touched && expenseForm.controls.date.hasError('required')) {
+          <small class="field-error">Date is required.</small>
+        }
+
+      </div>
+
+    </div>
+
+    <div class="row">
+
+      <div class="form-group">
+
+        <label>Category</label>
+
+        <select formControlName="category">
+          @for (category of categories; track category) {
+            <option [ngValue]="category">{{ categoryLabels[category] }}</option>
+          }
+        </select>
+
+      </div>
+
+      <div class="form-group">
+
+        <label>Type</label>
+
+        <select formControlName="transactionType">
+          <option [ngValue]="TransactionType.Income">Income</option>
+          <option [ngValue]="TransactionType.Expense">Expense</option>
+        </select>
+
+      </div>
+
+    </div>
+
+    <div class="form-group">
+
+      <label>Notes</label>
+
+      <textarea
+        rows="3"
+        formControlName="notes"
+        placeholder="Optional notes">
+      </textarea>
+
+    </div>
+
+    <div class="form-actions">
+
+      <button
+        type="submit"
+        [disabled]="expenseForm.invalid || isSaving()">
+
+        {{ isSaving() ? 'Saving...' : (editingId() ? 'Update Expense' : 'Add Expense') }}
+
+      </button>
+
+      @if (editingId()) {
+        <button
+          type="button"
+          class="secondary"
+          (click)="cancelEdit()">
+          Cancel
+        </button>
+      }
+
+    </div>
+
+  </form>
+
+  <hr>
+
+  @if (isLoading()) {
+    <app-spinner />
+  } @else {
+
+    @for (expense of pagedExpenses(); track expense.id) {
+
+      <div class="expense-card">
+
+        <div class="expense-header">
+
+          <div>
+
+            <h3>{{ expense.title }}</h3>
+
+            <small>{{ expense.date | date:'dd MMM yyyy' }}</small>
+
+          </div>
+
+          <div class="badges">
+
+            <span
+              class="type-badge"
+              [class.income]="expense.transactionType === TransactionType.Income"
+              [class.expense]="expense.transactionType === TransactionType.Expense">
+
+              {{ expense.transactionType === TransactionType.Income ? 'Income' : 'Expense' }}
+
+            </span>
+
+            <span class="category-badge">
+              {{ categoryLabels[expense.category] }}
+            </span>
+
+          </div>
+
+        </div>
+
+        <div
+          class="amount"
+          [class.income]="expense.transactionType === TransactionType.Income"
+          [class.expense]="expense.transactionType === TransactionType.Expense">
+
+          {{ expense.transactionType === TransactionType.Income ? '+' : '-' }}₹{{ expense.amount | number:'1.2-2' }}
+
+        </div>
+
+        @if (expense.notes) {
+          <p>{{ expense.notes }}</p>
+        }
+
+        <div class="actions">
+
+          <button
+            (click)="editExpense(expense)"
+            type="button">
+            Edit
+          </button>
+
+          <button
+            (click)="deleteExpense(expense.id)"
+            type="button">
+            Delete
+          </button>
+
+        </div>
+
+      </div>
+
+    } @empty {
+
+      <p class="empty">No expenses found.</p>
+
+    }
+
+    <app-paginator
+      [page]="currentPage()"
+      [totalPages]="totalPages()"
+      (pageChange)="currentPage.set($event)" />
+
+  }
+
 </section>

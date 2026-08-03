@@ -14,17 +14,19 @@ public class TaskRepository : ITaskRepository
         _dbContext = dbContext;
     }
 
-    public async Task<List<TaskItem>> GetAllAsync()
+    public async Task<List<TaskItem>> GetAllAsync(Guid userId)
     {
         return await _dbContext.Tasks
+            .Where(x => x.UserId == userId)
             .OrderBy(x => x.IsCompleted)
             .ThenBy(x => x.DueDate)
             .ToListAsync();
     }
 
-    public async Task<TaskItem?> GetByIdAsync(Guid id)
+    public async Task<TaskItem?> GetByIdAsync(Guid id, Guid userId)
     {
-        return await _dbContext.Tasks.FindAsync(id);
+        return await _dbContext.Tasks
+            .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
     }
 
     public async Task AddAsync(TaskItem task)

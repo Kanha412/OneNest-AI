@@ -172,6 +172,11 @@ editNote(note: Note) {
 
 }
 
+cancelEdit() {
+  this.editingId.set(null);
+  this.noteForm.reset();
+}
+
 togglePin(id: string) {
 
   this.notesService
