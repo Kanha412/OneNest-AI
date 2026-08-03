@@ -8,7 +8,7 @@
       type="text"
       placeholder="Search tasks..."
       [value]="search()"
-      (input)="search.set($any($event.target).value)" />
+      (input)="onSearch($any($event.target).value)" />
 
   </div>
 
@@ -23,7 +23,12 @@
       <input
         type="text"
         formControlName="title"
-        placeholder="Enter title">
+        placeholder="Enter title"
+        [class.is-invalid]="taskForm.controls.title.invalid && taskForm.controls.title.touched">
+
+      @if (taskForm.controls.title.invalid && taskForm.controls.title.touched) {
+        <small class="field-error">Title is required.</small>
+      }
 
     </div>
 
@@ -33,8 +38,13 @@
 
       <textarea
         rows="4"
-        formControlName="description">
+        formControlName="description"
+        [class.is-invalid]="taskForm.controls.description.invalid && taskForm.controls.description.touched">
       </textarea>
+
+      @if (taskForm.controls.description.invalid && taskForm.controls.description.touched) {
+        <small class="field-error">Description is required.</small>
+      }
 
     </div>
 
@@ -46,7 +56,17 @@
 
         <input
           type="date"
-          formControlName="dueDate">
+          formControlName="dueDate"
+          [min]="today"
+          [class.is-invalid]="taskForm.controls.dueDate.invalid && taskForm.controls.dueDate.touched">
+
+        @if (taskForm.controls.dueDate.touched && taskForm.controls.dueDate.hasError('required')) {
+          <small class="field-error">Due date is required.</small>
+        }
+
+        @if (taskForm.controls.dueDate.hasError('pastDate')) {
+          <small class="field-error">Due date cannot be in the past.</small>
+        }
 
       </div>
 
@@ -68,9 +88,11 @@
 
     </div>
 
-    <button type="submit">
+    <button
+      type="submit"
+      [disabled]="taskForm.invalid || isSaving()">
 
-      {{ editingId() ? 'Update Task' : 'Add Task' }}
+      {{ isSaving() ? 'Saving...' : (editingId() ? 'Update Task' : 'Add Task') }}
 
     </button>
 
@@ -78,7 +100,11 @@
 
   <hr>
 
-  @for(task of filteredTasks(); track task.id){
+  @if (isLoading()) {
+    <app-spinner />
+  } @else {
+
+  @for(task of pagedTasks(); track task.id){
 
     <div
       class="task-card"
@@ -150,6 +176,13 @@
       </div>
 
     </div>
+
+  }
+
+  <app-paginator
+    [page]="currentPage()"
+    [totalPages]="totalPages()"
+    (pageChange)="currentPage.set($event)" />
 
   }
 

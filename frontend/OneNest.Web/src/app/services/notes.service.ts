@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Note } from '../models/note.model';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -10,7 +11,7 @@ export class NotesService {
 
   private http = inject(HttpClient);
 
-  private readonly apiUrl = 'http://localhost:5189/api/Notes';
+  private readonly apiUrl = `${environment.apiBaseUrl}/Notes`;
 
   getNotes() {
    return this.http.get<Note[]>(this.apiUrl);

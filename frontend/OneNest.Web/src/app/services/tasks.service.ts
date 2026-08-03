@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { TaskItem } from '../models/task.model';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +12,7 @@ export class TasksService {
   private readonly http = inject(HttpClient);
 
   private readonly apiUrl =
-    'http://localhost:5189/api/Tasks';
+    `${environment.apiBaseUrl}/Tasks`;
 
   getTasks(): Observable<TaskItem[]> {
     return this.http.get<TaskItem[]>(this.apiUrl);

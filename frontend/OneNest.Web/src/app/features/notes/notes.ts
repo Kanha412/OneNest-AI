@@ -1,31 +1,53 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { NotesService } from '../../services/notes.service';
 import { Note } from '../../models/note.model';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { finalize } from 'rxjs';
+import { Spinner } from '../../shared/spinner/spinner';
+import { ConfirmService } from '../../shared/confirm/confirm.service';
+import { ToastService } from '../../shared/toast/toast.service';
+import { Paginator } from '../../shared/paginator/paginator';
 
 @Component({
   selector: 'app-notes',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, Spinner, Paginator],
   templateUrl: './notes.html',
   styleUrl: './notes.css'
 })
-export class Notes {
+export class Notes implements OnInit {
 
   private readonly notesService = inject(NotesService);
   private readonly fb = inject(FormBuilder);
+  private readonly confirmService = inject(ConfirmService);
+  private readonly toastService = inject(ToastService);
 
   readonly noteForm = this.fb.group({
   title: ['', Validators.required],
   content: ['', Validators.required]
 });
 
-  readonly notes = toSignal(this.notesService.getNotes(), {
-    initialValue: []
-  });
+  readonly notes = signal<Note[]>([]);
 
   readonly searchText = signal('');
+  readonly isLoading = signal(false);
+  readonly isSaving = signal(false);
+  readonly currentPage = signal(1);
+  readonly pageSize = 5;
   editingId = signal<string | null>(null);
+
+  ngOnInit(): void {
+    this.loadNotes();
+  }
+
+  private loadNotes(): void {
+    this.isLoading.set(true);
+    this.notesService.getNotes()
+      .pipe(finalize(() => this.isLoading.set(false)))
+      .subscribe({
+        next: notes => this.notes.set(notes),
+        error: () => this.toastService.error('Failed to load notes')
+      });
+  }
 
 readonly filteredNotes = computed(() => {
 
@@ -42,6 +64,21 @@ readonly filteredNotes = computed(() => {
 
 });
 
+  readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredNotes().length / this.pageSize))
+  );
+
+  readonly pagedNotes = computed(() => {
+    const page = Math.min(this.currentPage(), this.totalPages());
+    const start = (page - 1) * this.pageSize;
+    return this.filteredNotes().slice(start, start + this.pageSize);
+  });
+
+  onSearch(value: string): void {
+    this.searchText.set(value);
+    this.currentPage.set(1);
+  }
+
   saveNote(): void {
 
   if (this.noteForm.invalid) {
@@ -56,27 +93,41 @@ readonly filteredNotes = computed(() => {
 
   if (this.editingId()) {
 
+    this.isSaving.set(true);
     this.notesService
       .updateNote(this.editingId()!, noteData)
-      .subscribe(() => {
+      .pipe(finalize(() => this.isSaving.set(false)))
+      .subscribe({
+        next: () => {
 
-        this.editingId.set(null);
-        this.noteForm.reset();
+          this.editingId.set(null);
+          this.noteForm.reset();
 
-        location.reload();
+          this.loadNotes();
 
+          this.toastService.success('Note updated');
+
+        },
+        error: () => this.toastService.error('Failed to update note')
       });
 
   } else {
 
+    this.isSaving.set(true);
     this.notesService
       .createNote(noteData)
-      .subscribe(() => {
+      .pipe(finalize(() => this.isSaving.set(false)))
+      .subscribe({
+        next: () => {
 
-        this.noteForm.reset();
+          this.noteForm.reset();
 
-        location.reload();
+          this.loadNotes();
 
+          this.toastService.success('Note created');
+
+        },
+        error: () => this.toastService.error('Failed to create note')
       });
 
   }
@@ -84,16 +135,29 @@ readonly filteredNotes = computed(() => {
 }
 deleteNote(id: string) {
 
-  if (!confirm('Delete this note?')) {
-    return;
-  }
+  this.confirmService.confirm({
+    title: 'Delete note',
+    message: 'Are you sure you want to delete this note?',
+    confirmText: 'Delete'
+  }).then(confirmed => {
 
-  this.notesService.deleteNote(id)
-    .subscribe(() => {
+    if (!confirmed) {
+      return;
+    }
 
-      location.reload();
+    this.notesService.deleteNote(id)
+      .subscribe({
+        next: () => {
 
-    });
+          this.loadNotes();
+
+          this.toastService.success('Note deleted');
+
+        },
+        error: () => this.toastService.error('Failed to delete note')
+      });
+
+  });
 
 }
 
@@ -112,10 +176,9 @@ togglePin(id: string) {
 
   this.notesService
       .togglePin(id)
-      .subscribe(() => {
-
-          location.reload();
-
+      .subscribe({
+        next: () => this.loadNotes(),
+        error: () => this.toastService.error('Failed to update note')
       });
 
 }

@@ -1,0 +1,27 @@
+@if (totalPages() > 1) {
+
+  <div class="paginator">
+
+    <button
+      type="button"
+      class="paginator-btn"
+      [disabled]="!canPrev()"
+      (click)="prev()">
+      Previous
+    </button>
+
+    <span class="paginator-info">
+      Page {{ page() }} of {{ totalPages() }}
+    </span>
+
+    <button
+      type="button"
+      class="paginator-btn"
+      [disabled]="!canNext()"
+      (click)="next()">
+      Next
+    </button>
+
+  </div>
+
+}

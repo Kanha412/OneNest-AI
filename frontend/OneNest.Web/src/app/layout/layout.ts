@@ -1,9 +1,11 @@
 import { Component } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Confirm } from '../shared/confirm/confirm';
+import { Toast } from '../shared/toast/toast';
 
 @Component({
   selector: 'app-layout',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, Confirm, Toast],
   templateUrl: './layout.html',
   styleUrl: './layout.css'
 })

@@ -1,0 +1,33 @@
+@if (state().isOpen) {
+
+  <div class="confirm-overlay" (click)="onCancel()">
+
+    <div class="confirm-box" (click)="$event.stopPropagation()">
+
+      <h3 class="confirm-title">{{ state().title }}</h3>
+
+      <p class="confirm-message">{{ state().message }}</p>
+
+      <div class="confirm-actions">
+
+        <button
+          type="button"
+          class="confirm-cancel"
+          (click)="onCancel()">
+          {{ state().cancelText }}
+        </button>
+
+        <button
+          type="button"
+          class="confirm-ok"
+          (click)="onConfirm()">
+          {{ state().confirmText }}
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+}

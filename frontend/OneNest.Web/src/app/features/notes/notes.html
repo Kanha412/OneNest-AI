@@ -7,7 +7,7 @@
       type="text"
       placeholder="Search notes..."
       [value]="searchText()"
-      (input)="searchText.set($any($event.target).value)" />
+      (input)="onSearch($any($event.target).value)" />
   </div>
 
   <form
@@ -20,7 +20,12 @@
       <input
         type="text"
         formControlName="title"
-        placeholder="Enter title">
+        placeholder="Enter title"
+        [class.is-invalid]="noteForm.controls.title.invalid && noteForm.controls.title.touched">
+
+      @if (noteForm.controls.title.invalid && noteForm.controls.title.touched) {
+        <small class="field-error">Title is required.</small>
+      }
     </div>
 
     <div class="form-group">
@@ -29,19 +34,30 @@
       <textarea
         rows="5"
         formControlName="content"
-        placeholder="Write your note">
+        placeholder="Write your note"
+        [class.is-invalid]="noteForm.controls.content.invalid && noteForm.controls.content.touched">
       </textarea>
+
+      @if (noteForm.controls.content.invalid && noteForm.controls.content.touched) {
+        <small class="field-error">Content is required.</small>
+      }
     </div>
 
-    <button type="submit">
-        {{ editingId() ? 'Update Note' : 'Save Note' }}
+    <button
+      type="submit"
+      [disabled]="noteForm.invalid || isSaving()">
+        {{ isSaving() ? 'Saving...' : (editingId() ? 'Update Note' : 'Save Note') }}
     </button>
 
   </form>
 
   <hr>
 
-  @for (note of filteredNotes(); track note.id) {
+  @if (isLoading()) {
+    <app-spinner />
+  } @else {
+
+  @for (note of pagedNotes(); track note.id) {
 
     <div class="note-card">
 
@@ -80,6 +96,13 @@
   <p>{{ note.content }}</p>
 
 </div>
+
+  }
+
+  <app-paginator
+    [page]="currentPage()"
+    [totalPages]="totalPages()"
+    (pageChange)="currentPage.set($event)" />
 
   }
 
