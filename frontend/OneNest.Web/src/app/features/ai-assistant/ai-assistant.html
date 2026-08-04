@@ -1,0 +1,178 @@
+<section class="page ai-page">
+  <div class="panel-layout">
+    <aside class="sidebar card">
+      <div class="sidebar-header">
+        <h2>Conversations</h2>
+        <button type="button" class="new-chat-btn" (click)="newChat()" [disabled]="isLoading()">+ New Chat</button>
+      </div>
+
+      <input
+        class="search-input"
+        type="text"
+        placeholder="Search chats..."
+        [value]="conversationSearch()"
+        (input)="onConversationSearch(($any($event.target)).value)" />
+
+      <div class="conversation-filters">
+        <button
+          type="button"
+          class="filter-btn"
+          [class.active]="conversationFilter() === 'all'"
+          (click)="setConversationFilter('all')">
+          All
+        </button>
+        <button
+          type="button"
+          class="filter-btn"
+          [class.active]="conversationFilter() === 'active'"
+          (click)="setConversationFilter('active')">
+          Active
+        </button>
+        <button
+          type="button"
+          class="filter-btn"
+          [class.active]="conversationFilter() === 'archived'"
+          (click)="setConversationFilter('archived')">
+          Archived
+        </button>
+      </div>
+
+      @if (isLoading()) {
+        <app-spinner message="Loading chats..." />
+      } @else if (!filteredConversations().length) {
+        <p class="empty">No conversations yet.</p>
+      } @else {
+        <div class="conversation-list">
+          @for (conversation of filteredConversations(); track conversation.id) {
+            <button
+              type="button"
+              class="conversation-item"
+              [class.active]="selectedConversationId() === conversation.id"
+              (click)="selectConversation(conversation.id)">
+              <strong>
+                {{ conversation.title || 'New Chat' }}
+                @if (conversation.isArchived) {
+                  <span class="archived-pill">Archived</span>
+                }
+              </strong>
+              <small>{{ conversation.lastMessageAt | date:'dd MMM, hh:mm a' }}</small>
+            </button>
+          }
+        </div>
+      }
+    </aside>
+
+    <section class="chat-panel card">
+      <div class="ai-header">
+        <div>
+          <h1>{{ assistantName }}</h1>
+          <p>Your personal AI companion for everything that matters.</p>
+        </div>
+
+        @if (selectedConversation()) {
+          <div class="conversation-actions">
+            <input
+              class="rename-input"
+              type="text"
+              [formControl]="renameForm.controls.title"
+              placeholder="Rename conversation" />
+            <button type="button" class="action-btn" (click)="renameConversation()">Rename</button>
+            @if (!selectedConversation()?.isArchived) {
+              <button type="button" class="action-btn" (click)="archiveConversation()">Archive</button>
+            } @else {
+              <button type="button" class="action-btn" (click)="unarchiveConversation()">Restore</button>
+            }
+            <button type="button" class="action-btn danger" (click)="deleteConversation()">Delete</button>
+          </div>
+        }
+      </div>
+
+      <div class="suggested-prompts">
+        @for (prompt of suggestedPrompts; track prompt) {
+          <button type="button" class="prompt-chip" (click)="usePrompt(prompt)" [disabled]="isSending()">
+            {{ prompt }}
+          </button>
+        }
+      </div>
+
+      <div class="history" #historyContainer>
+        @if (isConversationLoading()) {
+          <app-spinner message="Loading conversation..." />
+        } @else if (!selectedConversation()) {
+          <div class="empty-state welcome-card">
+            <h3>👋 Hello {{ displayName }}!</h3>
+            <p>Create or select a conversation to begin.</p>
+          </div>
+        } @else if (!messages().length) {
+          <div class="empty-state welcome-card">
+            <h3>👋 Hello {{ displayName }}!</h3>
+            <p>I can help with:</p>
+            <ul>
+              <li>Notes</li>
+              <li>Tasks</li>
+              <li>Health</li>
+              <li>Expenses</li>
+              <li>Documents</li>
+              <li>General AI questions</li>
+            </ul>
+          </div>
+        } @else {
+          @for (message of messages(); track message.id) {
+            <div class="message-row" [class.user]="message.role === 'user'" [class.assistant]="message.role === 'assistant'">
+              <div class="bubble" [class.error]="message.isError">
+                <div class="bubble-head">
+                  <div class="message-meta">{{ message.role === 'user' ? 'You' : assistantName }}</div>
+                  @if (message.role === 'assistant') {
+                    <button type="button" class="copy-btn" (click)="copyMessage(message.content)" aria-label="Copy response">📋</button>
+                  }
+                </div>
+                <div class="divider"></div>
+                <div class="message-content" [innerHTML]="renderMessage(message.content)"></div>
+                <small>{{ message.timestamp | date:'hh:mm a' }}</small>
+                @if (message.role === 'assistant') {
+                  <small class="response-badge" [class.workspace]="message.usedWorkspaceData">
+                    {{ message.usedWorkspaceData ? 'Workspace-aware' : 'General' }}
+                    @if (message.usedWorkspaceData && message.workspaceToolsUsed.length) {
+                      • {{ message.workspaceToolsUsed.join(', ') }}
+                    }
+                  </small>
+                }
+              </div>
+            </div>
+          }
+        }
+
+        @if (isSending()) {
+          <div class="message-row assistant">
+            <div class="bubble typing">
+              <div class="message-meta">{{ assistantName }}</div>
+              <small>Thinking...</small>
+              <div class="typing-dots"><span></span><span></span><span></span></div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <form class="composer" [formGroup]="chatForm" (ngSubmit)="send()">
+        <textarea
+          formControlName="message"
+          rows="3"
+          placeholder="Ask anything..."
+          [disabled]="isSending() || !selectedConversationId()"
+          (keydown)="onComposerKeyDown($event)"></textarea>
+
+        <div class="composer-footer">
+          <!--<span class="shortcut-hint">Enter → Send &nbsp;&nbsp; Shift+Enter → New line</span>-->
+          <div class="composer-actions">
+            @if (isSending()) {
+              <app-spinner message="Generating response..." />
+            }
+            <button type="submit" class="send-btn" [disabled]="chatForm.invalid || isSending() || !selectedConversationId()" aria-label="Send message">
+              <span aria-hidden="true" style=" position: relative; left: -8px;">➤</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+</section>

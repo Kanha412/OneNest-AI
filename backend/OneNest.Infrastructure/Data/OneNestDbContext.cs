@@ -19,6 +19,8 @@ public class OneNestDbContext : DbContext
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<MedicalRecord> MedicalRecords => Set<MedicalRecord>();
     public DbSet<MedicalReport> MedicalReports => Set<MedicalReport>();
+    public DbSet<AIConversation> AIConversations => Set<AIConversation>();
+    public DbSet<AIMessage> AIMessages => Set<AIMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,5 +41,29 @@ public class OneNestDbContext : DbContext
         modelBuilder.Entity<MedicalRecord>()
             .Property(x => x.WeightKg)
             .HasPrecision(6, 2);
+
+        modelBuilder.Entity<AIConversation>()
+            .HasIndex(x => x.UserId);
+
+        modelBuilder.Entity<AIConversation>()
+            .HasIndex(x => x.CreatedAt);
+
+        modelBuilder.Entity<AIConversation>()
+            .HasIndex(x => x.UpdatedAt);
+
+        modelBuilder.Entity<AIConversation>()
+            .HasIndex(x => x.LastMessageAt);
+
+        modelBuilder.Entity<AIMessage>()
+            .HasIndex(x => x.ConversationId);
+
+        modelBuilder.Entity<AIMessage>()
+            .HasIndex(x => x.CreatedAt);
+
+        modelBuilder.Entity<AIConversation>()
+            .HasMany(x => x.Messages)
+            .WithOne(x => x.Conversation)
+            .HasForeignKey(x => x.ConversationId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

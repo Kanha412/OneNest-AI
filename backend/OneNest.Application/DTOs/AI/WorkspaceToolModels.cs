@@ -1,0 +1,23 @@
+namespace OneNest.Application.DTOs.AI;
+
+public class WorkspaceToolExecutionContext
+{
+    public string UserPrompt { get; set; } = string.Empty;
+    public IReadOnlyList<ConversationMessage> History { get; set; } = Array.Empty<ConversationMessage>();
+    public DateTime UtcNow { get; set; }
+}
+
+public class WorkspaceToolResult
+{
+    public string ToolName { get; set; } = string.Empty;
+    public string Summary { get; set; } = string.Empty;
+    public bool Success { get; set; } = true;
+}
+
+public class WorkspaceContextResult
+{
+    public bool UsedWorkspaceData => ToolResults.Count > 0;
+    public string ResponseMode => UsedWorkspaceData ? "workspace" : "general";
+    public List<WorkspaceToolResult> ToolResults { get; set; } = new();
+    public string ContextBlock { get; set; } = string.Empty;
+}

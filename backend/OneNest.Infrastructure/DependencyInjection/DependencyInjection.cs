@@ -2,15 +2,20 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
+using OneNest.Infrastructure.AI;
+using OneNest.Infrastructure.AI.WorkspaceTools;
 using OneNest.Infrastructure.Data;
+using OneNest.Application.Interfaces.AI;
 using OneNest.Application.Interfaces.Repositories;
 using OneNest.Application.Interfaces.Security;
 using OneNest.Application.Interfaces.Services;
 using OneNest.Application.Interfaces.Storage;
-using OneNest.Application.Services;using OneNest.Domain.Entities;
+using OneNest.Application.Services;
+using OneNest.Domain.Entities;
 using OneNest.Infrastructure.Repositories;
 using OneNest.Infrastructure.Security;
 using OneNest.Infrastructure.Storage;
+
 namespace OneNest.Infrastructure;
 
 public static class DependencyInjection
@@ -41,6 +46,21 @@ public static class DependencyInjection
         services.AddScoped<IMedicalReportRepository, MedicalReportRepository>();
         services.AddScoped<IMedicalReportService, MedicalReportService>();
         services.AddScoped<IHealthSummaryService, HealthSummaryService>();
+
+        services.Configure<AIOptions>(configuration.GetSection("AI"));
+        services.AddHttpClient<IAIProvider, GeminiProvider>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddScoped<IAIConversationRepository, AIConversationRepository>();
+        services.AddScoped<IAIWorkspaceOrchestrator, AIWorkspaceOrchestrator>();
+        services.AddScoped<IAIWorkspaceTool, TasksWorkspaceTool>();
+        services.AddScoped<IAIWorkspaceTool, ExpensesWorkspaceTool>();
+        services.AddScoped<IAIWorkspaceTool, NotesWorkspaceTool>();
+        services.AddScoped<IAIWorkspaceTool, DocumentsWorkspaceTool>();
+        services.AddScoped<IAIWorkspaceTool, HealthWorkspaceTool>();
+        services.AddScoped<IAIConversationService, AIConversationService>();
+        services.AddScoped<IAIService, AIService>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAuthService, AuthService>();

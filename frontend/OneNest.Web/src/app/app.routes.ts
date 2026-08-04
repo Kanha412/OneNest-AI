@@ -7,6 +7,7 @@ import { Expenses } from './features/expenses/expenses';
 import { Documents } from './features/documents/documents';
 import { Health } from './features/health/health';
 import { Settings } from './features/settings/settings';
+import { AiAssistant } from './features/ai-assistant/ai-assistant';
 import { Login } from './features/auth/login';
 import { Register } from './features/auth/register';
 import { authGuard } from './core/auth.guard';
@@ -26,6 +27,7 @@ export const routes: Routes = [
       { path: 'expenses', component: Expenses },
       { path: 'documents', component: Documents },
       { path: 'health', component: Health },
+      { path: 'ai-assistant', component: AiAssistant },
       { path: 'settings', component: Settings }
     ]
   },

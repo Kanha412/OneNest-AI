@@ -25,6 +25,7 @@ export class Layout {
     { label: 'Expenses', path: 'expenses' },
     { label: 'Documents', path: 'documents' },
     { label: 'Health', path: 'health' },
+    { label: 'AI Assistant', path: 'ai-assistant' },
     { label: 'Settings', path: 'settings' }
   ];
 
