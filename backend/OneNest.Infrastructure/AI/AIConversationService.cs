@@ -15,6 +15,7 @@ public class AIConversationService : IAIConversationService
 {
     private const int HistoryLimit = 20;
     private const string MetadataMarkerStart = "<!--ONENEST_AI_META:";
+    private const string MetadataMarkerLegacyStart = "<!-ONENEST_AI_META:";
     private const string MetadataMarkerEnd = "-->";
 
     private readonly IAIConversationRepository _conversationRepository;
@@ -217,7 +218,9 @@ public class AIConversationService : IAIConversationService
 
         try
         {
-            var aiText = await _provider.GenerateResponseAsync(systemPrompt, history, cancellationToken);
+            var rawAiText = await _provider.GenerateResponseAsync(systemPrompt, history, cancellationToken);
+            var parsedProviderPayload = ParsePersistedMessage(rawAiText);
+            var aiText = parsedProviderPayload.Text;
 
             var assistantMetadata = new
             {
@@ -384,6 +387,7 @@ public class AIConversationService : IAIConversationService
         builder.AppendLine("- Be concise, clear, and helpful.");
         builder.AppendLine("- Use markdown when useful for readability.");
         builder.AppendLine("- When workspace context is available, prioritize it for personalized answers.");
+        builder.AppendLine("- For money amounts from workspace context, preserve source currency exactly (INR/₹). Do not convert to USD unless user explicitly asks.");
         builder.AppendLine("- When workspace context is not available, continue as a general assistant.");
 
         return builder.ToString().Trim();
@@ -398,8 +402,11 @@ public class AIConversationService : IAIConversationService
     private static ParsedMessage ParsePersistedMessage(string content)
     {
         var value = content ?? string.Empty;
-        var idx = value.LastIndexOf(MetadataMarkerStart, StringComparison.Ordinal);
 
+        var standardIdx = value.LastIndexOf(MetadataMarkerStart, StringComparison.Ordinal);
+        var legacyIdx = value.LastIndexOf(MetadataMarkerLegacyStart, StringComparison.Ordinal);
+
+        var idx = Math.Max(standardIdx, legacyIdx);
         if (idx < 0)
         {
             return new ParsedMessage
@@ -410,6 +417,8 @@ public class AIConversationService : IAIConversationService
                 WorkspaceToolsUsed = new List<string>()
             };
         }
+
+        var markerLength = idx == standardIdx ? MetadataMarkerStart.Length : MetadataMarkerLegacyStart.Length;
 
         var endIdx = value.IndexOf(MetadataMarkerEnd, idx, StringComparison.Ordinal);
         if (endIdx < 0)
@@ -424,7 +433,7 @@ public class AIConversationService : IAIConversationService
         }
 
         var text = value[..idx].TrimEnd();
-        var jsonStart = idx + MetadataMarkerStart.Length;
+        var jsonStart = idx + markerLength;
         var json = value.Substring(jsonStart, endIdx - jsonStart);
 
         try

@@ -5,6 +5,7 @@ namespace OneNest.Application.Interfaces.AI;
 public interface IAIWorkspaceTool
 {
     string Name { get; }
+    string Description { get; }
 
     bool CanHandle(string prompt);
 

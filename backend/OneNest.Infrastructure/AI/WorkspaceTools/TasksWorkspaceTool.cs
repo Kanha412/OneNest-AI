@@ -19,6 +19,7 @@ public class TasksWorkspaceTool : IAIWorkspaceTool
     }
 
     public string Name => "tasks";
+    public string Description => "Use for task lists, pending/overdue counts, due dates, and task status summaries.";
 
     public bool CanHandle(string prompt)
     {

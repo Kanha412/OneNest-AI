@@ -53,6 +53,7 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(30);
         });
         services.AddScoped<IAIConversationRepository, AIConversationRepository>();
+        services.AddScoped<IAIWorkspacePlanner, AIWorkspacePlanner>();
         services.AddScoped<IAIWorkspaceOrchestrator, AIWorkspaceOrchestrator>();
         services.AddScoped<IAIWorkspaceTool, TasksWorkspaceTool>();
         services.AddScoped<IAIWorkspaceTool, ExpensesWorkspaceTool>();
@@ -63,7 +64,9 @@ public static class DependencyInjection
         services.AddScoped<IAIService, AIService>();
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserSettingsRepository, UserSettingsRepository>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<ISettingsService, SettingsService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();

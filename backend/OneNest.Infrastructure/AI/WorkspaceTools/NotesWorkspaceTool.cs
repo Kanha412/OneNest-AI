@@ -19,6 +19,7 @@ public class NotesWorkspaceTool : IAIWorkspaceTool
     }
 
     public string Name => "notes";
+    public string Description => "Use for note counts, note summaries, pinned notes, and recent note context.";
 
     public bool CanHandle(string prompt)
     {

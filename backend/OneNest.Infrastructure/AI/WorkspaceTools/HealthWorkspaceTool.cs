@@ -19,6 +19,7 @@ public class HealthWorkspaceTool : IAIWorkspaceTool
     }
 
     public string Name => "health";
+    public string Description => "Use for medicines, appointments, medical reports, and health summary questions.";
 
     public bool CanHandle(string prompt)
     {

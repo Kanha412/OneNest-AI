@@ -130,12 +130,18 @@
                 <div class="message-content" [innerHTML]="renderMessage(message.content)"></div>
                 <small>{{ message.timestamp | date:'hh:mm a' }}</small>
                 @if (message.role === 'assistant') {
-                  <small class="response-badge" [class.workspace]="message.usedWorkspaceData">
-                    {{ message.usedWorkspaceData ? 'Workspace-aware' : 'General' }}
-                    @if (message.usedWorkspaceData && message.workspaceToolsUsed.length) {
-                      • {{ message.workspaceToolsUsed.join(', ') }}
-                    }
-                  </small>
+                  @if (message.usedWorkspaceData && message.workspaceToolsUsed.length) {
+                    <div class="workspace-context">
+                      <span class="response-context-title">🧠 Workspace Context:</span>
+                      <div class="response-context-tools">
+                        @for (tool of message.workspaceToolsUsed; track tool) {
+                          <span class="context-tool">✓ {{ tool }}</span>
+                        }
+                      </div>
+                    </div>
+                  } @else {
+                    <small class="response-badge">General</small>
+                  }
                 }
               </div>
             </div>

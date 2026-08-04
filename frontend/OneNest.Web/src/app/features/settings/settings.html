@@ -1,4 +1,217 @@
-<section class="page">
-  <h1>Settings</h1>
-  <p>Manage your OneNest AI preferences.</p>
+<section class="page settings-page">
+  <header class="settings-header">
+    <div>
+      <h1>⚙ Settings</h1>
+      <p>Manage your OneNest preferences.</p>
+    </div>
+  </header>
+
+  @if (isLoading()) {
+    <app-spinner message="Loading settings..." />
+  } @else {
+    <div class="settings-layout" [formGroup]="form">
+      <aside class="settings-nav card">
+        <div class="settings-user-summary">
+          <div class="avatar">👤</div>
+          <strong>{{ currentUser()?.fullName || settings()?.account?.displayName }}</strong>
+          <small>{{ currentUser()?.email || settings()?.account?.email }}</small>
+        </div>
+
+        @for (section of sections; track section.id) {
+          <button
+            type="button"
+            class="section-btn"
+            [class.active]="activeSection() === section.id"
+            (click)="setSection(section.id)">
+            <span>{{ section.icon }}</span>
+            <span>{{ section.label }}</span>
+          </button>
+        }
+      </aside>
+
+      <section class="settings-content">
+        @switch (activeSection()) {
+          @case ('account') {
+            <article class="card section-card">
+              <h2>👤 Account</h2>
+              <p>Manage your account information and security settings.</p>
+
+              <div class="form-group spaced-block">
+                <label>👤 Display Name</label>
+                <input type="text" formControlName="displayName" [class.is-invalid]="form.controls.displayName.touched && form.controls.displayName.invalid" />
+                @if (form.controls.displayName.touched && form.controls.displayName.invalid) {
+                  <small class="field-error">Display name is required (max 120 chars).</small>
+                }
+              </div>
+
+              <div class="row account-row">
+                <div class="form-group">
+                  <label>✉ Email</label>
+                  <div class="readonly-field">{{ settings()?.account?.email || '' }} 🔒</div>
+                </div>
+                <div class="form-group">
+                  <label>📅 Member Since</label>
+                  <div class="readonly-field">{{ (settings()?.account?.memberSince | date:'dd MMM yyyy') || '' }} 🔒</div>
+                </div>
+              </div>
+
+              <div class="form-group spaced-block">
+                <label>🕒 Last Login</label>
+                <div class="readonly-field">{{ settings()?.account?.lastLoginAt ? (settings()?.account?.lastLoginAt | date:'dd MMM yyyy, hh:mm a') : 'Not available yet' }} 🔒</div>
+              </div>
+
+              <div class="section-divider"></div>
+              <p class="danger-note">Security actions are available in the Privacy & Security section.</p>
+            </article>
+          }
+
+          @case ('ai') {
+            <article class="card section-card">
+              <h2>🤖 AI Preferences</h2>
+              <p>Control how OneNest AI behaves and responds.</p>
+
+              <label class="toggle-row"><input type="checkbox" formControlName="enableWorkspaceContext" /> Enable Workspace Context</label>
+              <label class="toggle-row"><input type="checkbox" formControlName="enableSmartSuggestions" /> Enable Smart Suggestions</label>
+
+              <div class="row">
+                <div class="form-group">
+                  <label>Context Depth</label>
+                  <select formControlName="contextDepth">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Default Conversation Mode</label>
+                  <select formControlName="defaultConversationMode">
+                    <option value="workspace">Workspace-aware</option>
+                    <option value="general">General AI</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Response Style</label>
+                <select formControlName="responseStyle">
+                  <option value="short">Short</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="detailed">Detailed</option>
+                </select>
+              </div>
+            </article>
+          }
+
+          @case ('documents') {
+            <article class="card section-card">
+              <h2>📄 Documents</h2>
+              <p>Storage metrics and cleanup behavior.</p>
+
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <small>Storage Used</small>
+                  <strong>{{ formatStorage(documentSummary()?.storageUsed ?? 0) }}</strong>
+                </div>
+                <div class="stat-card">
+                  <small>Uploaded Files</small>
+                  <strong>{{ documentSummary()?.totalDocuments ?? 0 }}</strong>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Auto-delete trash (days)</label>
+                <input type="number" formControlName="autoDeleteTrashDays" min="1" max="365" />
+              </div>
+
+              <div class="actions">
+                <button type="button" (click)="placeholder('Download All Documents')">Download All</button>
+                <button type="button" class="danger" (click)="placeholder('Delete All Documents')">Delete All</button>
+              </div>
+            </article>
+          }
+
+          @case ('health') {
+            <article class="card section-card">
+              <h2>🏥 Health</h2>
+              <p>Default units and reminder lead time preferences.</p>
+
+              <div class="row">
+                <div class="form-group">
+                  <label>Default Height Unit</label>
+                  <select formControlName="defaultHeightUnit">
+                    <option value="cm">cm</option>
+                    <option value="ft">ft</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Default Weight Unit</label>
+                  <select formControlName="defaultWeightUnit">
+                    <option value="kg">kg</option>
+                    <option value="lb">lb</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Reminder Lead Time (hours)</label>
+                <input type="number" formControlName="reminderLeadTimeHours" min="1" max="168" />
+              </div>
+            </article>
+          }
+
+          @case ('privacy') {
+            <article class="card section-card">
+              <h2>🔐 Privacy & Security</h2>
+              <p>Manage security actions and data controls.</p>
+
+              <div class="actions wrap">
+                <button type="button" class="btn-outline" (click)="placeholder('Change Password')">Change Password</button>
+                <button type="button" class="btn-outline" (click)="placeholder('Export My Data')">Export My Data</button>
+                <button type="button" class="btn-outline" (click)="placeholder('Logged-in Devices')">Logged-in Devices</button>
+              </div>
+
+              <div class="section-divider"></div>
+              <h3>Danger Zone</h3>
+              <p class="danger-note">This action cannot be undone.</p>
+              <button type="button" class="danger" (click)="placeholder('Delete Account')">⚠ Delete Account</button>
+            </article>
+          }
+
+          @case ('about') {
+            <article class="card section-card">
+              <h2>ℹ️ About</h2>
+              <p>Application build and product information.</p>
+
+              <div class="about-grid">
+                <div><label>Application Version</label><p>{{ settings()?.about?.applicationVersion }}</p></div>
+                <div><label>Build Version</label><p>{{ settings()?.about?.buildVersion }}</p></div>
+                <div><label>Developer</label><p>{{ settings()?.about?.developer }}</p></div>
+                <div><label>Copyright</label><p>{{ settings()?.about?.copyright }}</p></div>
+              </div>
+
+              <div class="actions wrap">
+                <button type="button" class="btn-outline" (click)="placeholder('Privacy Policy')">Privacy Policy</button>
+                <button type="button" class="btn-outline" (click)="placeholder('Terms of Service')">Terms</button>
+                <button type="button" class="btn-outline" (click)="placeholder('GitHub Repository')">GitHub</button>
+              </div>
+            </article>
+          }
+        }
+
+        <div class="footer-actions">
+          <div class="save-state">
+            @if (hasUnsavedChanges()) {
+              <div class="unsaved-indicator">⚠ Unsaved changes</div>
+            } @else if (lastSavedAt()) {
+              <div class="save-indicator">✔ Saved successfully · {{ getLastSavedText() }}</div>
+            }
+          </div>
+
+          <button type="button" (click)="save()" [disabled]="isSaving() || form.invalid || !hasUnsavedChanges()">
+            {{ isSaving() ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </div>
+      </section>
+    </div>
+  }
 </section>

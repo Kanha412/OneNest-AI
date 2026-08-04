@@ -1,3 +1,4 @@
+using System.Globalization;
 using OneNest.Application.DTOs.AI;
 using OneNest.Application.Interfaces.AI;
 using OneNest.Application.Interfaces.Services;
@@ -19,6 +20,7 @@ public class ExpensesWorkspaceTool : IAIWorkspaceTool
     }
 
     public string Name => "expenses";
+    public string Description => "Use for expense/income/balance analysis, spending trends, and recent transactions.";
 
     public bool CanHandle(string prompt)
     {
@@ -33,9 +35,10 @@ public class ExpensesWorkspaceTool : IAIWorkspaceTool
 
         var lines = new List<string>
         {
-            $"Current balance: {summary.CurrentBalance}",
-            $"This month income: {summary.ThisMonthIncome}",
-            $"This month expense: {summary.ThisMonthExpense}",
+            $"Currency: INR (₹)",
+            $"Current balance: {FormatInr(summary.CurrentBalance)}",
+            $"This month income: {FormatInr(summary.ThisMonthIncome)}",
+            $"This month expense: {FormatInr(summary.ThisMonthExpense)}",
             $"Top expense category: {topCategory}"
         };
 
@@ -43,7 +46,7 @@ public class ExpensesWorkspaceTool : IAIWorkspaceTool
         {
             lines.Add("Recent transactions:");
             lines.AddRange(summary.RecentTransactions.Select(x =>
-                $"- {x.Title}: {x.Amount} ({x.TransactionType}) on {x.Date:yyyy-MM-dd}"));
+                $"- {x.Title}: {FormatInr(x.Amount)} ({x.TransactionType}) on {x.Date:yyyy-MM-dd}"));
         }
 
         return new WorkspaceToolResult
@@ -51,5 +54,11 @@ public class ExpensesWorkspaceTool : IAIWorkspaceTool
             ToolName = Name,
             Summary = string.Join("\n", lines)
         };
+    }
+
+    private static string FormatInr(decimal amount)
+    {
+        var culture = CultureInfo.GetCultureInfo("en-IN");
+        return $"₹{amount.ToString("N2", culture)}";
     }
 }

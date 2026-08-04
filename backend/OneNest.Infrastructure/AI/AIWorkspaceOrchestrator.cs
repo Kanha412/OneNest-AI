@@ -7,10 +7,12 @@ namespace OneNest.Infrastructure.AI;
 public class AIWorkspaceOrchestrator : IAIWorkspaceOrchestrator
 {
     private readonly IEnumerable<IAIWorkspaceTool> _tools;
+    private readonly IAIWorkspacePlanner _planner;
 
-    public AIWorkspaceOrchestrator(IEnumerable<IAIWorkspaceTool> tools)
+    public AIWorkspaceOrchestrator(IEnumerable<IAIWorkspaceTool> tools, IAIWorkspacePlanner planner)
     {
         _tools = tools;
+        _planner = planner;
     }
 
     public async Task<WorkspaceContextResult> BuildContextAsync(WorkspaceToolExecutionContext context, CancellationToken cancellationToken = default)
@@ -23,8 +25,30 @@ public class AIWorkspaceOrchestrator : IAIWorkspaceOrchestrator
             return result;
         }
 
-        var matchedTools = _tools
+        var allTools = _tools
+            .DistinctBy(x => x.Name)
+            .ToList();
+
+        var definitions = allTools
+            .Select(x => new WorkspaceToolDefinition
+            {
+                Name = x.Name,
+                Description = x.Description
+            })
+            .ToList();
+
+        var plannerSelection = await _planner.PlanAsync(context, definitions, cancellationToken);
+
+        var keywordMatched = allTools
             .Where(x => x.CanHandle(prompt))
+            .ToList();
+
+        var planned = allTools
+            .Where(x => plannerSelection.SelectedTools.Any(name => string.Equals(name, x.Name, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+        var matchedTools = planned
+            .Concat(keywordMatched)
             .DistinctBy(x => x.Name)
             .ToList();
 

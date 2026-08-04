@@ -21,6 +21,7 @@ public class OneNestDbContext : DbContext
     public DbSet<MedicalReport> MedicalReports => Set<MedicalReport>();
     public DbSet<AIConversation> AIConversations => Set<AIConversation>();
     public DbSet<AIMessage> AIMessages => Set<AIMessage>();
+    public DbSet<UserSettings> UserSettings => Set<UserSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -65,5 +66,17 @@ public class OneNestDbContext : DbContext
             .WithOne(x => x.Conversation)
             .HasForeignKey(x => x.ConversationId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<UserSettings>()
+            .HasIndex(x => x.UserId)
+            .IsUnique();
+
+        modelBuilder.Entity<UserSettings>()
+            .Property(x => x.AutoDeleteTrashDays)
+            .HasDefaultValue(30);
+
+        modelBuilder.Entity<UserSettings>()
+            .Property(x => x.ReminderLeadTimeHours)
+            .HasDefaultValue(24);
     }
 }

@@ -19,6 +19,7 @@ public class DocumentsWorkspaceTool : IAIWorkspaceTool
     }
 
     public string Name => "documents";
+    public string Description => "Use for document vault summaries, uploads, file counts, and recent documents.";
 
     public bool CanHandle(string prompt)
     {

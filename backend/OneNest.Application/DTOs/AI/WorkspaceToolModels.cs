@@ -21,3 +21,14 @@ public class WorkspaceContextResult
     public List<WorkspaceToolResult> ToolResults { get; set; } = new();
     public string ContextBlock { get; set; } = string.Empty;
 }
+
+public class WorkspaceToolDefinition
+{
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+}
+
+public class WorkspaceToolPlanResult
+{
+    public List<string> SelectedTools { get; set; } = new();
+}

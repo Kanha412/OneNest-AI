@@ -45,6 +45,22 @@ export class AuthService {
     return this._token();
   }
 
+  updateCurrentUserProfile(fullName: string, email: string): void {
+    const current = this._user();
+    if (!current) {
+      return;
+    }
+
+    const updated: AuthResponse = {
+      ...current,
+      fullName,
+      email
+    };
+
+    localStorage.setItem(USER_KEY, JSON.stringify(updated));
+    this._user.set(updated);
+  }
+
   private setSession(response: AuthResponse): void {
     localStorage.setItem(TOKEN_KEY, response.token);
     localStorage.setItem(USER_KEY, JSON.stringify(response));
