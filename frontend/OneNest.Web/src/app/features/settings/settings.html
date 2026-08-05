@@ -57,11 +57,11 @@
 
               <div class="form-group spaced-block">
                 <label>🕒 Last Login</label>
-                <div class="readonly-field">{{ settings()?.account?.lastLoginAt ? (settings()?.account?.lastLoginAt | date:'dd MMM yyyy, hh:mm a') : 'Not available yet' }} 🔒</div>
+                <div class="readonly-field">{{ (settings()?.account?.lastLoginAt || settings()?.account?.memberSince) | date:'dd MMM yyyy, hh:mm a' }} 🔒</div>
               </div>
 
               <div class="section-divider"></div>
-              <p class="danger-note">Security actions are available in the Privacy & Security section.</p>
+              <!--<p class="danger-note">Security actions are available in the Security section.</p>-->
             </article>
           }
 
@@ -70,9 +70,6 @@
               <h2>🤖 AI Preferences</h2>
               <p>Control how OneNest AI behaves and responds.</p>
 
-              <label class="toggle-row"><input type="checkbox" formControlName="enableWorkspaceContext" /> Enable Workspace Context</label>
-              <label class="toggle-row"><input type="checkbox" formControlName="enableSmartSuggestions" /> Enable Smart Suggestions</label>
-
               <div class="row">
                 <div class="form-group">
                   <label>Context Depth</label>
@@ -80,13 +77,6 @@
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
                     <option value="high">High</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Default Conversation Mode</label>
-                  <select formControlName="defaultConversationMode">
-                    <option value="workspace">Workspace-aware</option>
-                    <option value="general">General AI</option>
                   </select>
                 </div>
               </div>
@@ -104,36 +94,32 @@
 
           @case ('documents') {
             <article class="card section-card">
-              <h2>📄 Documents</h2>
-              <p>Storage metrics and cleanup behavior.</p>
+              <h2>🗄️ Storage</h2>
+              <p>Total file storage across Documents and Health Reports.</p>
 
               <div class="stats-grid">
                 <div class="stat-card">
-                  <small>Storage Used</small>
-                  <strong>{{ formatStorage(documentSummary()?.storageUsed ?? 0) }}</strong>
+                  <small>Total Storage Used</small>
+                  <strong>{{ getStorageUsageText() }}</strong>
+                  <em class="storage-left">{{ getStorageLeftText() }}</em>
                 </div>
                 <div class="stat-card">
-                  <small>Uploaded Files</small>
-                  <strong>{{ documentSummary()?.totalDocuments ?? 0 }}</strong>
+                  <small>Total Stored Files</small>
+                  <strong>{{ totalStoredFiles() }}</strong>
                 </div>
-              </div>
-
-              <div class="form-group">
-                <label>Auto-delete trash (days)</label>
-                <input type="number" formControlName="autoDeleteTrashDays" min="1" max="365" />
               </div>
 
               <div class="actions">
-                <button type="button" (click)="placeholder('Download All Documents')">Download All</button>
-                <button type="button" class="danger" (click)="placeholder('Delete All Documents')">Delete All</button>
+                <button type="button" (click)="downloadAllStorageFiles()">Download Storage Archive</button>
+                <button type="button" class="danger" (click)="clearAllStorageFiles()">Clear Storage</button>
               </div>
             </article>
           }
 
           @case ('health') {
             <article class="card section-card">
-              <h2>🏥 Health</h2>
-              <p>Default units and reminder lead time preferences.</p>
+              <h2>📏 Measurements</h2>
+              <p>Default measurement units used for health record input and display.</p>
 
               <div class="row">
                 <div class="form-group">
@@ -152,35 +138,26 @@
                 </div>
               </div>
 
-              <div class="form-group">
-                <label>Reminder Lead Time (hours)</label>
-                <input type="number" formControlName="reminderLeadTimeHours" min="1" max="168" />
-              </div>
+
             </article>
           }
 
           @case ('privacy') {
             <article class="card section-card">
-              <h2>🔐 Privacy & Security</h2>
-              <p>Manage security actions and data controls.</p>
+              <h2>🔐 Security</h2>
+              <p>Manage your account security with essential actions only.</p>
 
               <div class="actions wrap">
-                <button type="button" class="btn-outline" (click)="placeholder('Change Password')">Change Password</button>
-                <button type="button" class="btn-outline" (click)="placeholder('Export My Data')">Export My Data</button>
-                <button type="button" class="btn-outline" (click)="placeholder('Logged-in Devices')">Logged-in Devices</button>
+                <button type="button" class="btn-outline" (click)="openChangePasswordModal()">Change Password</button>
+                <button type="button" class="danger" (click)="promptDeleteAccountFlow()">⚠ Delete Account</button>
               </div>
-
-              <div class="section-divider"></div>
-              <h3>Danger Zone</h3>
-              <p class="danger-note">This action cannot be undone.</p>
-              <button type="button" class="danger" (click)="placeholder('Delete Account')">⚠ Delete Account</button>
             </article>
           }
 
           @case ('about') {
             <article class="card section-card">
               <h2>ℹ️ About</h2>
-              <p>Application build and product information.</p>
+              <p>Version, ownership, and legal information.</p>
 
               <div class="about-grid">
                 <div><label>Application Version</label><p>{{ settings()?.about?.applicationVersion }}</p></div>
@@ -190,28 +167,86 @@
               </div>
 
               <div class="actions wrap">
-                <button type="button" class="btn-outline" (click)="placeholder('Privacy Policy')">Privacy Policy</button>
-                <button type="button" class="btn-outline" (click)="placeholder('Terms of Service')">Terms</button>
-                <button type="button" class="btn-outline" (click)="placeholder('GitHub Repository')">GitHub</button>
+                <button type="button" class="btn-outline" (click)="openPrivacyPolicy()">Privacy Policy</button>
+                <button type="button" class="btn-outline" (click)="openTerms()">Terms</button>
+                <button type="button" class="btn-outline" (click)="openGithub()">GitHub</button>
               </div>
             </article>
           }
         }
 
-        <div class="footer-actions">
+        <div class="footer-actions" [class.hide-save-actions]="activeSection() === 'documents' || activeSection() === 'privacy' || activeSection() === 'about'">
           <div class="save-state">
-            @if (hasUnsavedChanges()) {
-              <div class="unsaved-indicator">⚠ Unsaved changes</div>
-            } @else if (lastSavedAt()) {
-              <div class="save-indicator">✔ Saved successfully · {{ getLastSavedText() }}</div>
+            @if (activeSection() !== 'documents' && activeSection() !== 'privacy' && activeSection() !== 'about') {
+              @if (hasUnsavedChanges()) {
+                <div class="unsaved-indicator">⚠ Unsaved changes</div>
+              } @else if (lastSavedAt()) {
+                <div class="save-indicator">✔ Saved successfully · {{ getLastSavedText() }}</div>
+              }
             }
           </div>
 
-          <button type="button" (click)="save()" [disabled]="isSaving() || form.invalid || !hasUnsavedChanges()">
-            {{ isSaving() ? 'Saving...' : 'Save Changes' }}
-          </button>
+          @if (activeSection() !== 'documents' && activeSection() !== 'privacy' && activeSection() !== 'about') {
+            <button type="button" class="save-btn" (click)="save()" [disabled]="isSaving() || form.invalid || !hasUnsavedChanges()">
+              {{ isSaving() ? 'Saving...' : 'Save Changes' }}
+            </button>
+          }
         </div>
       </section>
     </div>
+
+    @if (showChangePasswordModal()) {
+      <div class="security-modal-backdrop">
+        <div class="security-modal change-password-modal" role="dialog" aria-modal="true" aria-label="Change Password">
+          <div class="security-modal-header">
+            <h3>Change Password</h3>
+            <button type="button" class="modal-close" (click)="closeChangePasswordModal()" aria-label="Close">✕</button>
+          </div>
+          <p class="modal-subtitle">Use a strong password with at least 6 characters.</p>
+          <div class="form-group spaced-block">
+            <label>Current Password</label>
+            <input type="password" [formControl]="changePasswordForm.controls.currentPassword" />
+          </div>
+          <div class="row security-password-row">
+            <div class="form-group">
+              <label>New Password</label>
+              <input type="password" [formControl]="changePasswordForm.controls.newPassword" />
+            </div>
+            <div class="form-group">
+              <label>Confirm Password</label>
+              <input type="password" [formControl]="changePasswordForm.controls.confirmPassword" />
+            </div>
+          </div>
+          <div class="actions modal-actions">
+            <button type="button" class="btn-outline" (click)="closeChangePasswordModal()">Cancel</button>
+            <button type="button" class="save-btn" (click)="changePassword()" [disabled]="isChangingPassword()">
+              {{ isChangingPassword() ? 'Changing...' : 'Change Password' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showDeleteAccountModal()) {
+      <div class="security-modal-backdrop">
+        <div class="security-modal delete-account-modal" role="dialog" aria-modal="true" aria-label="Delete Account">
+          <div class="security-modal-header">
+            <h3>Delete Account</h3>
+            <button type="button" class="modal-close" (click)="closeDeleteAccountModal()" aria-label="Close">✕</button>
+          </div>
+          <p class="modal-subtitle danger-text">This action is permanent. Enter your password to confirm deletion.</p>
+          <div class="form-group spaced-block">
+            <label>Confirm Password</label>
+            <input type="password" [formControl]="deleteAccountForm.controls.password" placeholder="Enter your password" />
+          </div>
+          <div class="actions modal-actions">
+            <button type="button" class="btn-outline" (click)="closeDeleteAccountModal()">Cancel</button>
+            <button type="button" class="danger" (click)="deleteAccount()" [disabled]="isDeletingAccount()">
+              {{ isDeletingAccount() ? 'Deleting...' : 'Delete Account' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   }
 </section>

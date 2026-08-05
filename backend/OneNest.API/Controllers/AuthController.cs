@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OneNest.Application.DTOs.Auth;
 using OneNest.Application.Exceptions;
@@ -41,6 +42,36 @@ public class AuthController : ControllerBase
         catch (AuthException ex)
         {
             return Unauthorized(new { message = ex.Message });
+        }
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+    {
+        try
+        {
+            await _authService.ChangePasswordAsync(request);
+            return Ok(new { message = "Password changed successfully." });
+        }
+        catch (AuthException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [Authorize]
+    [HttpPost("delete-account")]
+    public async Task<IActionResult> DeleteAccount(DeleteAccountRequest request)
+    {
+        try
+        {
+            await _authService.DeleteAccountAsync(request);
+            return Ok(new { message = "Account deleted successfully." });
+        }
+        catch (AuthException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
     }
 }

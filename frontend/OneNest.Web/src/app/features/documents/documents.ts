@@ -210,9 +210,15 @@ export class Documents implements OnInit {
           this.loadDocuments();
           this.toastService.success('Document uploaded');
         },
-        error: err => this.toastService.error(
-          typeof err?.error === 'string' ? err.error : 'Failed to upload document'
-        )
+        error: err => {
+          const serverMessage = typeof err?.error === 'string' ? err.error : '';
+          if (serverMessage) {
+            this.toastService.error(serverMessage);
+            return;
+          }
+
+          this.toastService.error('Upload failed. Ensure total storage stays within 150 MB.');
+        }
       });
   }
 

@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using OneNest.Application.DTOs.Documents;
 using OneNest.Application.Interfaces.Repositories;
 using OneNest.Application.Interfaces.Security;
@@ -11,7 +12,9 @@ namespace OneNest.Application.Services;
 public class DocumentService : IDocumentService
 {
     private const long MaxFileSizeBytes = 25 * 1024 * 1024; // 25 MB
+    private const long MaxTotalStorageBytes = 150L * 1024 * 1024; // 150 MB
     private const int RecentCount = 4;
+    private const string ZipContentType = "application/zip";
 
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -21,15 +24,18 @@ public class DocumentService : IDocumentService
     };
 
     private readonly IDocumentRepository _documentRepository;
+    private readonly IMedicalReportRepository _medicalReportRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly ICurrentUserService _currentUserService;
 
     public DocumentService(
         IDocumentRepository documentRepository,
+        IMedicalReportRepository medicalReportRepository,
         IFileStorageService fileStorageService,
         ICurrentUserService currentUserService)
     {
         _documentRepository = documentRepository;
+        _medicalReportRepository = medicalReportRepository;
         _fileStorageService = fileStorageService;
         _currentUserService = currentUserService;
     }
@@ -80,6 +86,16 @@ public class DocumentService : IDocumentService
         if (input.FileSize > MaxFileSizeBytes)
         {
             throw new InvalidOperationException("File size exceeds the 25 MB limit.");
+        }
+
+        var documents = await _documentRepository.GetAllAsync(userId);
+        var medicalReports = await _medicalReportRepository.GetAllAsync(userId);
+        var currentUsageBytes = documents.Sum(x => x.FileSize) + medicalReports.Sum(x => x.FileSize);
+        var projectedUsageBytes = currentUsageBytes + input.FileSize;
+
+        if (projectedUsageBytes > MaxTotalStorageBytes)
+        {
+            throw new InvalidOperationException($"Upload exceeds your 150 MB storage limit. Current usage: {FormatSize(currentUsageBytes)} / 150 MB.");
         }
 
         var extension = Path.GetExtension(input.OriginalFileName);
@@ -173,6 +189,81 @@ public class DocumentService : IDocumentService
         };
     }
 
+    public async Task<DocumentFileResult?> DownloadAllAsync()
+    {
+        var userId = _currentUserService.UserId;
+        var documents = await _documentRepository.GetAllAsync(userId);
+        var reports = await _medicalReportRepository.GetAllAsync(userId);
+
+        if (!documents.Any() && !reports.Any())
+            return null;
+
+        var archiveStream = new MemoryStream();
+
+        using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var document in documents)
+            {
+                await using var sourceStream = await _fileStorageService.OpenReadAsync(userId, document.StoredFileName);
+                if (sourceStream is null)
+                    continue;
+
+                var safeName = string.IsNullOrWhiteSpace(document.OriginalFileName)
+                    ? $"document-{document.Id}"
+                    : document.OriginalFileName;
+
+                var entry = archive.CreateEntry($"Documents/{safeName}", CompressionLevel.Fastest);
+                await using var entryStream = entry.Open();
+                await sourceStream.CopyToAsync(entryStream);
+            }
+
+            foreach (var report in reports)
+            {
+                await using var sourceStream = await _fileStorageService.OpenReadAsync(userId, report.StoredFileName);
+                if (sourceStream is null)
+                    continue;
+
+                var safeName = string.IsNullOrWhiteSpace(report.OriginalFileName)
+                    ? $"report-{report.Id}"
+                    : report.OriginalFileName;
+
+                var entry = archive.CreateEntry($"Health-Reports/{safeName}", CompressionLevel.Fastest);
+                await using var entryStream = entry.Open();
+                await sourceStream.CopyToAsync(entryStream);
+            }
+        }
+
+        archiveStream.Position = 0;
+
+        return new DocumentFileResult
+        {
+            Content = archiveStream,
+            ContentType = ZipContentType,
+            OriginalFileName = $"onenest-storage-{DateTime.UtcNow:yyyyMMddHHmmss}.zip"
+        };
+    }
+
+    public async Task<int> DeleteAllAsync()
+    {
+        var userId = _currentUserService.UserId;
+        var documents = await _documentRepository.GetAllAsync(userId);
+        var reports = await _medicalReportRepository.GetAllAsync(userId);
+
+        foreach (var document in documents)
+        {
+            await _fileStorageService.DeleteAsync(userId, document.StoredFileName);
+            await _documentRepository.DeleteAsync(document);
+        }
+
+        foreach (var report in reports)
+        {
+            await _fileStorageService.DeleteAsync(userId, report.StoredFileName);
+            await _medicalReportRepository.DeleteAsync(report);
+        }
+
+        return documents.Count + reports.Count;
+    }
+
     public async Task<List<DocumentResponse>> GetRecentAsync(int count)
     {
         var documents = await _documentRepository.GetRecentAsync(
@@ -224,5 +315,11 @@ public class DocumentService : IDocumentService
             CreatedAt = document.CreatedAt,
             UpdatedAt = document.UpdatedAt
         };
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        var valueInMb = bytes / (1024d * 1024d);
+        return $"{valueInMb:0.##} MB";
     }
 }

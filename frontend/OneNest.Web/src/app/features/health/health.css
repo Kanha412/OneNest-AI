@@ -69,6 +69,12 @@
   font-size: 13px;
 }
 
+.readonly-field {
+  background: var(--color-surface-muted);
+  color: var(--color-text-label);
+  cursor: default;
+}
+
 .form-actions {
   display: flex;
   gap: var(--space-3);

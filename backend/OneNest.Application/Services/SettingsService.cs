@@ -102,7 +102,7 @@ public class SettingsService : ISettingsService
                 DisplayName = user.FullName,
                 Email = user.Email,
                 MemberSince = user.CreatedAt,
-                LastLoginAt = null
+                LastLoginAt = user.LastLoginAt
             },
             AiPreferences = new AiPreferencesSettingsResponse
             {

@@ -67,8 +67,18 @@ export class DocumentsService {
     return this.http.delete(`${this.apiUrl}/${id}`);
   }
 
+  deleteAllDocuments(): Observable<{ deletedCount: number }> {
+    return this.http.delete<{ deletedCount: number }>(`${this.apiUrl}/all`);
+  }
+
   downloadFile(id: string): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/${id}/download`, {
+      responseType: 'blob'
+    });
+  }
+
+  downloadAllFiles(): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/download-all`, {
       responseType: 'blob'
     });
   }

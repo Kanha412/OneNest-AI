@@ -7,4 +7,6 @@ public interface IFileStorageService
     Task<Stream?> OpenReadAsync(Guid userId, string storedFileName);
 
     Task DeleteAsync(Guid userId, string storedFileName);
+
+    Task DeleteUserDirectoryAsync(Guid userId);
 }

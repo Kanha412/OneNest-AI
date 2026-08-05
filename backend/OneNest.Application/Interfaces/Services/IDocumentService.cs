@@ -15,7 +15,11 @@ public interface IDocumentService
 
     Task<bool> DeleteAsync(Guid id);
 
+    Task<int> DeleteAllAsync();
+
     Task<DocumentFileResult?> DownloadAsync(Guid id);
+
+    Task<DocumentFileResult?> DownloadAllAsync();
 
     Task<List<DocumentResponse>> GetRecentAsync(int count);
 

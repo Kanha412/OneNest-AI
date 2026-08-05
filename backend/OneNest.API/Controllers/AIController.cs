@@ -58,7 +58,7 @@ public class AIController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            return MapInvalidOperation(ex);
         }
     }
 
@@ -105,7 +105,7 @@ public class AIController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            return MapInvalidOperation(ex);
         }
     }
 
@@ -119,7 +119,17 @@ public class AIController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            return MapInvalidOperation(ex);
         }
+    }
+
+    private ActionResult MapInvalidOperation(InvalidOperationException ex)
+    {
+        if (ex.Message.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests, ex.Message);
+        }
+
+        return BadRequest(ex.Message);
     }
 }

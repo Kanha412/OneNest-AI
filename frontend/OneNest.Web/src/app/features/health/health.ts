@@ -17,6 +17,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { finalize } from 'rxjs';
 
 import { HealthHubService } from '../../services/health-hub.service';
+import { SettingsService } from '../../services/settings.service';
 import {
   Medicine,
   Appointment,
@@ -45,10 +46,15 @@ type HealthTab = 'medicines' | 'appointments' | 'records' | 'reports';
 export class Health implements OnInit {
 
   private readonly service = inject(HealthHubService);
+  private readonly settingsService = inject(SettingsService);
   private readonly fb = inject(FormBuilder);
   private readonly confirmService = inject(ConfirmService);
   private readonly toastService = inject(ToastService);
   private readonly sanitizer = inject(DomSanitizer);
+
+  private heightUnit: 'cm' | 'ft' = 'cm';
+  private weightUnit: 'kg' | 'lb' = 'kg';
+  private rawMedicalRecord: MedicalRecord | null = null;
 
   // ---------- Labels / enum lists ----------
   readonly foodTimingLabels = FOOD_TIMING_LABELS;
@@ -82,6 +88,7 @@ export class Health implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadUnitPreferences();
     this.loadMedicines();
     this.loadAppointments();
     this.loadRecord();
@@ -444,6 +451,52 @@ export class Health implements OnInit {
     emergencyContactPhone: ['']
   });
 
+  get heightUnitLabel(): string {
+    return this.heightUnit;
+  }
+
+  get weightUnitLabel(): string {
+    return this.weightUnit;
+  }
+
+  get heightPlaceholder(): string {
+    return this.heightUnit === 'ft' ? 'Enter height in ft' : 'Enter height in cm';
+  }
+
+  get weightPlaceholder(): string {
+    return this.weightUnit === 'lb' ? 'Enter weight in lb' : 'Enter weight in kg';
+  }
+
+  get bmiDisplay(): string {
+    const heightInput = this.recordForm.value.heightCm;
+    const weightInput = this.recordForm.value.weightKg;
+
+    if (heightInput === null || heightInput === undefined || weightInput === null || weightInput === undefined) {
+      return '—';
+    }
+
+    const heightCm = this.heightUnit === 'ft'
+      ? Number(heightInput) * 30.48
+      : Number(heightInput);
+
+    const weightKg = this.weightUnit === 'lb'
+      ? Number(weightInput) * 0.45359237
+      : Number(weightInput);
+
+    if (!Number.isFinite(heightCm) || !Number.isFinite(weightKg) || heightCm <= 0 || weightKg <= 0) {
+      return '—';
+    }
+
+    const heightMeters = heightCm / 100;
+    const bmi = weightKg / (heightMeters * heightMeters);
+
+    if (!Number.isFinite(bmi) || bmi <= 0) {
+      return '—';
+    }
+
+    return bmi.toFixed(1);
+  }
+
   loadRecord(): void {
     this.recordLoading.set(true);
     this.service.getMedicalRecord()
@@ -452,15 +505,8 @@ export class Health implements OnInit {
         next: (r: MedicalRecord) => {
           if (r) {
             this.hasRecord.set(true);
-            this.recordForm.patchValue({
-              bloodGroup: r.bloodGroup,
-              heightCm: r.heightCm,
-              weightKg: r.weightKg,
-              allergies: r.allergies,
-              existingConditions: r.existingConditions,
-              emergencyContactName: r.emergencyContactName,
-              emergencyContactPhone: r.emergencyContactPhone
-            });
+            this.rawMedicalRecord = r;
+            this.applyRecordToForm(r);
           }
         },
         error: () => { /* 204 No Content: no record yet */ }
@@ -471,8 +517,8 @@ export class Health implements OnInit {
     const v = this.recordForm.value;
     const payload = {
       bloodGroup: v.bloodGroup ?? '',
-      heightCm: v.heightCm ?? null,
-      weightKg: v.weightKg ?? null,
+      heightCm: this.convertHeightForStorage(v.heightCm),
+      weightKg: this.convertWeightForStorage(v.weightKg),
       allergies: v.allergies ?? '',
       existingConditions: v.existingConditions ?? '',
       emergencyContactName: v.emergencyContactName ?? '',
@@ -636,9 +682,15 @@ export class Health implements OnInit {
           this.resetReportForm();
           this.loadReports();
         },
-        error: err => this.toastService.error(
-          typeof err?.error === 'string' ? err.error : 'Failed to upload report'
-        )
+        error: err => {
+          const serverMessage = typeof err?.error === 'string' ? err.error : '';
+          if (serverMessage) {
+            this.toastService.error(serverMessage);
+            return;
+          }
+
+          this.toastService.error('Upload failed. Ensure total storage stays within 150 MB.');
+        }
       });
   }
 
@@ -761,5 +813,84 @@ export class Health implements OnInit {
 
   private today(): string {
     return new Date().toISOString().substring(0, 10);
+  }
+
+  private loadUnitPreferences(): void {
+    this.settingsService.getSettings().subscribe({
+      next: settings => {
+        this.heightUnit = settings.health.defaultHeightUnit === 'ft' ? 'ft' : 'cm';
+        this.weightUnit = settings.health.defaultWeightUnit === 'lb' ? 'lb' : 'kg';
+
+        if (this.rawMedicalRecord) {
+          this.applyRecordToForm(this.rawMedicalRecord);
+        }
+      },
+      error: () => {
+        this.heightUnit = 'cm';
+        this.weightUnit = 'kg';
+      }
+    });
+  }
+
+  private applyRecordToForm(record: MedicalRecord): void {
+    this.recordForm.patchValue({
+      bloodGroup: record.bloodGroup,
+      heightCm: this.convertHeightForDisplay(record.heightCm),
+      weightKg: this.convertWeightForDisplay(record.weightKg),
+      allergies: record.allergies,
+      existingConditions: record.existingConditions,
+      emergencyContactName: record.emergencyContactName,
+      emergencyContactPhone: record.emergencyContactPhone
+    });
+  }
+
+  private convertHeightForDisplay(heightCm: number | null): number | null {
+    if (heightCm === null || heightCm === undefined) {
+      return null;
+    }
+
+    return this.heightUnit === 'ft'
+      ? Number((Number(heightCm) / 30.48).toFixed(2))
+      : Number(heightCm);
+  }
+
+  private convertWeightForDisplay(weightKg: number | null): number | null {
+    if (weightKg === null || weightKg === undefined) {
+      return null;
+    }
+
+    return this.weightUnit === 'lb'
+      ? Number((Number(weightKg) / 0.45359237).toFixed(2))
+      : Number(weightKg);
+  }
+
+  private convertHeightForStorage(heightInput: number | null | undefined): number | null {
+    if (heightInput === null || heightInput === undefined) {
+      return null;
+    }
+
+    const value = Number(heightInput);
+    if (!Number.isFinite(value) || value <= 0) {
+      return null;
+    }
+
+    return this.heightUnit === 'ft'
+      ? Number((value * 30.48).toFixed(2))
+      : Number(value.toFixed(2));
+  }
+
+  private convertWeightForStorage(weightInput: number | null | undefined): number | null {
+    if (weightInput === null || weightInput === undefined) {
+      return null;
+    }
+
+    const value = Number(weightInput);
+    if (!Number.isFinite(value) || value <= 0) {
+      return null;
+    }
+
+    return this.weightUnit === 'lb'
+      ? Number((value * 0.45359237).toFixed(2))
+      : Number(value.toFixed(2));
   }
 }

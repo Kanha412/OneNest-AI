@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OneNest.Infrastructure.Data;
@@ -11,9 +12,11 @@ using OneNest.Infrastructure.Data;
 namespace OneNest.Infrastructure.Migrations
 {
     [DbContext(typeof(OneNestDbContext))]
-    partial class OneNestDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260805111607_AddUserLastLoginAt")]
+    partial class AddUserLastLoginAt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -4,6 +4,7 @@ using OneNest.Application.Exceptions;
 using OneNest.Application.Interfaces.Repositories;
 using OneNest.Application.Interfaces.Security;
 using OneNest.Application.Interfaces.Services;
+using OneNest.Application.Interfaces.Storage;
 using OneNest.Domain.Entities;
 
 namespace OneNest.Application.Services;
@@ -13,15 +14,21 @@ public class AuthService : IAuthService
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly ICurrentUserService _currentUserService;
+    private readonly IFileStorageService _fileStorageService;
 
     public AuthService(
         IUserRepository userRepository,
         IPasswordHasher<User> passwordHasher,
-        IJwtTokenGenerator jwtTokenGenerator)
+        IJwtTokenGenerator jwtTokenGenerator,
+        ICurrentUserService currentUserService,
+        IFileStorageService fileStorageService)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _jwtTokenGenerator = jwtTokenGenerator;
+        _currentUserService = currentUserService;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
@@ -60,7 +67,49 @@ public class AuthService : IAuthService
         if (verification == PasswordVerificationResult.Failed)
             throw new AuthException("Invalid email or password.");
 
+        user.LastLoginAt = DateTime.UtcNow;
+        user.UpdatedAt = user.LastLoginAt;
+        await _userRepository.UpdateAsync(user);
+
         return BuildAuthResponse(user);
+    }
+
+    public async Task ChangePasswordAsync(ChangePasswordRequest request)
+    {
+        var user = await _userRepository.GetByIdAsync(_currentUserService.UserId)
+            ?? throw new AuthException("User not found.");
+
+        var currentPasswordVerification = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.CurrentPassword);
+        if (currentPasswordVerification == PasswordVerificationResult.Failed)
+        {
+            throw new AuthException("Current password is incorrect.");
+        }
+
+        if (request.CurrentPassword == request.NewPassword)
+        {
+            throw new AuthException("New password must be different from current password.");
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _userRepository.UpdateAsync(user);
+    }
+
+    public async Task DeleteAccountAsync(DeleteAccountRequest request)
+    {
+        var userId = _currentUserService.UserId;
+        var user = await _userRepository.GetByIdAsync(userId)
+            ?? throw new AuthException("User not found.");
+
+        var verification = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+        if (verification == PasswordVerificationResult.Failed)
+        {
+            throw new AuthException("Password is incorrect.");
+        }
+
+        await _userRepository.HardDeleteAccountAsync(userId);
+        await _fileStorageService.DeleteUserDirectoryAsync(userId);
     }
 
     private AuthResponse BuildAuthResponse(User user)

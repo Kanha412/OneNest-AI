@@ -1,7 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { HealthService } from '../../services/health.service';
 import { NotesService } from '../../services/notes.service';
 import { TasksService } from '../../services/tasks.service';
 import { ExpensesService } from '../../services/expenses.service';
@@ -28,7 +27,6 @@ import { ChartConfiguration } from 'chart.js';
   styleUrl: './dashboard.css'
 })
 export class Dashboard {
-  private readonly healthService = inject(HealthService);
   private readonly notesService = inject(NotesService);
   private readonly tasksService = inject(TasksService);
   private readonly expensesService = inject(ExpensesService);
@@ -43,8 +41,6 @@ export class Dashboard {
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
   ];
-
-  readonly health = toSignal(this.healthService.getHealth());
 
   private readonly notes = toSignal(this.notesService.getNotes(), {
     initialValue: []

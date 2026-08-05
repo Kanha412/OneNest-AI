@@ -63,6 +63,17 @@ public class DocumentsController : ControllerBase
         return File(file.Content, file.ContentType, file.OriginalFileName);
     }
 
+    [HttpGet("download-all")]
+    public async Task<IActionResult> DownloadAll()
+    {
+        var archive = await _documentService.DownloadAllAsync();
+
+        if (archive is null)
+            return NotFound("No documents available to download.");
+
+        return File(archive.Content, archive.ContentType, archive.OriginalFileName);
+    }
+
     [HttpGet("{id:guid}/preview")]
     public async Task<IActionResult> Preview(Guid id)
     {
@@ -137,5 +148,12 @@ public class DocumentsController : ControllerBase
             return NotFound();
 
         return NoContent();
+    }
+
+    [HttpDelete("all")]
+    public async Task<IActionResult> DeleteAll()
+    {
+        var deletedCount = await _documentService.DeleteAllAsync();
+        return Ok(new { deletedCount });
     }
 }

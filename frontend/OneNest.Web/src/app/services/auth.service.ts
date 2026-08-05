@@ -2,7 +2,13 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { AuthResponse, LoginRequest, RegisterRequest } from '../models/auth.model';
+import {
+  AuthResponse,
+  ChangePasswordRequest,
+  DeleteAccountRequest,
+  LoginRequest,
+  RegisterRequest
+} from '../models/auth.model';
 
 const TOKEN_KEY = 'onenest.token';
 const USER_KEY = 'onenest.user';
@@ -32,6 +38,14 @@ export class AuthService {
   login(request: LoginRequest) {
     return this.http.post<AuthResponse>(`${this.apiUrl}/login`, request)
       .pipe(tap(response => this.setSession(response)));
+  }
+
+  changePassword(request: ChangePasswordRequest) {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/change-password`, request);
+  }
+
+  deleteAccount(request: DeleteAccountRequest) {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/delete-account`, request);
   }
 
   logout(): void {

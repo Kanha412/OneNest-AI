@@ -43,4 +43,38 @@ public class UserRepository : IUserRepository
         _dbContext.Users.Update(user);
         await _dbContext.SaveChangesAsync();
     }
+
+    public async Task HardDeleteAccountAsync(Guid userId)
+    {
+        var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user is null)
+        {
+            return;
+        }
+
+        var userSettings = await _dbContext.UserSettings.Where(x => x.UserId == userId).ToListAsync();
+        var notes = await _dbContext.Notes.Where(x => x.UserId == userId).ToListAsync();
+        var tasks = await _dbContext.Tasks.Where(x => x.UserId == userId).ToListAsync();
+        var expenses = await _dbContext.Expenses.Where(x => x.UserId == userId).ToListAsync();
+        var medicines = await _dbContext.Medicines.Where(x => x.UserId == userId).ToListAsync();
+        var appointments = await _dbContext.Appointments.Where(x => x.UserId == userId).ToListAsync();
+        var medicalRecords = await _dbContext.MedicalRecords.Where(x => x.UserId == userId).ToListAsync();
+        var documents = await _dbContext.Documents.Where(x => x.UserId == userId).ToListAsync();
+        var medicalReports = await _dbContext.MedicalReports.Where(x => x.UserId == userId).ToListAsync();
+        var aiConversations = await _dbContext.AIConversations.Where(x => x.UserId == userId).ToListAsync();
+
+        _dbContext.UserSettings.RemoveRange(userSettings);
+        _dbContext.Notes.RemoveRange(notes);
+        _dbContext.Tasks.RemoveRange(tasks);
+        _dbContext.Expenses.RemoveRange(expenses);
+        _dbContext.Medicines.RemoveRange(medicines);
+        _dbContext.Appointments.RemoveRange(appointments);
+        _dbContext.MedicalRecords.RemoveRange(medicalRecords);
+        _dbContext.Documents.RemoveRange(documents);
+        _dbContext.MedicalReports.RemoveRange(medicalReports);
+        _dbContext.AIConversations.RemoveRange(aiConversations);
+        _dbContext.Users.Remove(user);
+
+        await _dbContext.SaveChangesAsync();
+    }
 }

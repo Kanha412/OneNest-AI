@@ -11,6 +11,7 @@ namespace OneNest.Application.Services;
 public class MedicalReportService : IMedicalReportService
 {
     private const long MaxFileSizeBytes = 25 * 1024 * 1024; // 25 MB
+    private const long MaxTotalStorageBytes = 150L * 1024 * 1024; // 150 MB
 
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -19,15 +20,18 @@ public class MedicalReportService : IMedicalReportService
     };
 
     private readonly IMedicalReportRepository _medicalReportRepository;
+    private readonly IDocumentRepository _documentRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly ICurrentUserService _currentUserService;
 
     public MedicalReportService(
         IMedicalReportRepository medicalReportRepository,
+        IDocumentRepository documentRepository,
         IFileStorageService fileStorageService,
         ICurrentUserService currentUserService)
     {
         _medicalReportRepository = medicalReportRepository;
+        _documentRepository = documentRepository;
         _fileStorageService = fileStorageService;
         _currentUserService = currentUserService;
     }
@@ -77,6 +81,16 @@ public class MedicalReportService : IMedicalReportService
         if (input.FileSize > MaxFileSizeBytes)
         {
             throw new InvalidOperationException("File size exceeds the 25 MB limit.");
+        }
+
+        var reports = await _medicalReportRepository.GetAllAsync(userId);
+        var documents = await _documentRepository.GetAllAsync(userId);
+        var currentUsageBytes = reports.Sum(x => x.FileSize) + documents.Sum(x => x.FileSize);
+        var projectedUsageBytes = currentUsageBytes + input.FileSize;
+
+        if (projectedUsageBytes > MaxTotalStorageBytes)
+        {
+            throw new InvalidOperationException($"Upload exceeds your 150 MB storage limit. Current usage: {FormatSize(currentUsageBytes)} / 150 MB.");
         }
 
         var extension = Path.GetExtension(input.OriginalFileName);
@@ -190,5 +204,11 @@ public class MedicalReportService : IMedicalReportService
             CreatedAt = report.CreatedAt,
             UpdatedAt = report.UpdatedAt
         };
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        var valueInMb = bytes / (1024d * 1024d);
+        return $"{valueInMb:0.##} MB";
     }
 }

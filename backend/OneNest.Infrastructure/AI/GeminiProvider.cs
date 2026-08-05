@@ -29,7 +29,7 @@ public class GeminiProvider : IAIProvider
             throw new InvalidOperationException("AI API key is not configured.");
 
         var model = string.IsNullOrWhiteSpace(_options.Model)
-            ? "gemini-flash-latest"
+            ? "gemini-3.5-flash"
             : _options.Model.Trim();
 
         var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={_options.ApiKey}";
@@ -93,7 +93,16 @@ public class GeminiProvider : IAIProvider
                 if (response.StatusCode == HttpStatusCode.BadRequest)
                     throw new InvalidOperationException("Invalid AI request. Please shorten or rephrase your prompt.");
 
-                if ((int)response.StatusCode == 429 || (int)response.StatusCode >= 500)
+                if ((int)response.StatusCode == 429)
+                {
+                    if (attempt == maxAttempts)
+                        throw new InvalidOperationException("AI rate limit reached. Please wait and try again.");
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(600 * attempt), cancellationToken);
+                    continue;
+                }
+
+                if ((int)response.StatusCode >= 500)
                 {
                     if (attempt == maxAttempts)
                         throw new InvalidOperationException("AI service is temporarily unavailable. Please try again shortly.");

@@ -13,4 +13,6 @@ public interface IUserRepository
     Task AddAsync(User user);
 
     Task UpdateAsync(User user);
+
+    Task HardDeleteAccountAsync(Guid userId);
 }

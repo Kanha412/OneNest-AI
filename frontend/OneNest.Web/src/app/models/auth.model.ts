@@ -16,3 +16,13 @@ export interface RegisterRequest {
   email: string;
   password: string;
 }
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface DeleteAccountRequest {
+  password: string;
+}

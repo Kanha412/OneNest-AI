@@ -22,6 +22,7 @@ public class AIConversationService : IAIConversationService
     private readonly IAIProvider _provider;
     private readonly IAIWorkspaceOrchestrator _workspaceOrchestrator;
     private readonly IUserRepository _userRepository;
+    private readonly IUserSettingsRepository _userSettingsRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly AIOptions _options;
 
@@ -30,6 +31,7 @@ public class AIConversationService : IAIConversationService
         IAIProvider provider,
         IAIWorkspaceOrchestrator workspaceOrchestrator,
         IUserRepository userRepository,
+        IUserSettingsRepository userSettingsRepository,
         ICurrentUserService currentUserService,
         IOptions<AIOptions> options)
     {
@@ -37,6 +39,7 @@ public class AIConversationService : IAIConversationService
         _provider = provider;
         _workspaceOrchestrator = workspaceOrchestrator;
         _userRepository = userRepository;
+        _userSettingsRepository = userSettingsRepository;
         _currentUserService = currentUserService;
         _options = options.Value;
     }
@@ -204,6 +207,10 @@ public class AIConversationService : IAIConversationService
         var history = recentMessages.Select(MapConversationMessage).ToList();
 
         var user = await _userRepository.GetByIdAsync(userId);
+        var userSettings = await _userSettingsRepository.GetByUserIdAsync(userId);
+
+        var contextDepth = NormalizeAiPreference(userSettings?.ContextDepth, "medium");
+        var responseStyle = NormalizeAiPreference(userSettings?.ResponseStyle, "balanced");
 
         var workspaceContext = await _workspaceOrchestrator.BuildContextAsync(
             new WorkspaceToolExecutionContext
@@ -214,7 +221,8 @@ public class AIConversationService : IAIConversationService
             },
             cancellationToken);
 
-        var systemPrompt = BuildSystemPrompt(user?.FullName, now, workspaceContext.ContextBlock);
+        var scopedWorkspaceContext = ApplyContextDepth(workspaceContext.ContextBlock, contextDepth);
+        var systemPrompt = BuildSystemPrompt(user?.FullName, now, scopedWorkspaceContext, responseStyle);
 
         try
         {
@@ -249,7 +257,7 @@ public class AIConversationService : IAIConversationService
             return new ChatResponse
             {
                 Response = aiText,
-                Model = string.IsNullOrWhiteSpace(_options.Model) ? "gemini-flash-latest" : _options.Model,
+                Model = string.IsNullOrWhiteSpace(_options.Model) ? "gemini-3.5-flash" : _options.Model,
                 Timestamp = assistantMessage.CreatedAt,
                 UsedWorkspaceData = workspaceContext.UsedWorkspaceData,
                 ResponseMode = workspaceContext.ResponseMode,
@@ -363,9 +371,10 @@ public class AIConversationService : IAIConversationService
         return title;
     }
 
-    private static string BuildSystemPrompt(string? fullName, DateTime nowUtc, string? workspaceContextBlock)
+    private static string BuildSystemPrompt(string? fullName, DateTime nowUtc, string? workspaceContextBlock, string responseStyle)
     {
         var safeName = string.IsNullOrWhiteSpace(fullName) ? "User" : fullName.Trim();
+        var style = NormalizeAiPreference(responseStyle, "balanced");
 
         var builder = new StringBuilder();
         builder.AppendLine("You are OneNest AI Assistant.");
@@ -390,7 +399,86 @@ public class AIConversationService : IAIConversationService
         builder.AppendLine("- For money amounts from workspace context, preserve source currency exactly (INR/₹). Do not convert to USD unless user explicitly asks.");
         builder.AppendLine("- When workspace context is not available, continue as a general assistant.");
 
+        if (style == "short")
+        {
+            builder.AppendLine("- Response style preference: SHORT. Keep replies brief and to the point (about 2-4 bullets or short paragraph unless user asks for detail).");
+        }
+        else if (style == "detailed")
+        {
+            builder.AppendLine("- Response style preference: DETAILED. Provide structured, thorough responses with clear sections and actionable guidance.");
+        }
+        else
+        {
+            builder.AppendLine("- Response style preference: BALANCED. Keep responses practical with moderate detail.");
+        }
+
         return builder.ToString().Trim();
+    }
+
+    private static string NormalizeAiPreference(string? value, string fallback)
+    {
+        var normalized = value?.Trim().ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(normalized) ? fallback : normalized;
+    }
+
+    private static string ApplyContextDepth(string? workspaceContextBlock, string contextDepth)
+    {
+        if (string.IsNullOrWhiteSpace(workspaceContextBlock))
+        {
+            return string.Empty;
+        }
+
+        var depth = NormalizeAiPreference(contextDepth, "medium");
+        if (depth != "low")
+        {
+            return workspaceContextBlock.Trim();
+        }
+
+        var lines = workspaceContextBlock
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => x.Trim())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToList();
+
+        if (!lines.Any())
+        {
+            return workspaceContextBlock.Trim();
+        }
+
+        var compact = new StringBuilder();
+        compact.AppendLine("Workspace data retrieved for this user (low context depth):");
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (!lines[i].StartsWith("[", StringComparison.Ordinal) || !lines[i].EndsWith("]", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            compact.AppendLine(lines[i]);
+
+            for (var j = i + 1; j < lines.Count; j++)
+            {
+                var next = lines[j];
+                if (next.StartsWith("[", StringComparison.Ordinal) && next.EndsWith("]", StringComparison.Ordinal))
+                {
+                    break;
+                }
+
+                if (next.StartsWith("Use this workspace data", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                compact.AppendLine(next);
+                break;
+            }
+
+            compact.AppendLine();
+        }
+
+        compact.AppendLine("Use this workspace data as the highest priority for user-specific answers.");
+        return compact.ToString().Trim();
     }
 
     private static string AppendMetadataToMessage(string text, object metadata)

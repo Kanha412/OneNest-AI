@@ -11,6 +11,8 @@ import { AiAssistant } from './features/ai-assistant/ai-assistant';
 import { Login } from './features/auth/login';
 import { Register } from './features/auth/register';
 import { authGuard } from './core/auth.guard';
+import { PrivacyPolicy } from './features/legal/privacy-policy';
+import { Terms } from './features/legal/terms';
 
 export const routes: Routes = [
   { path: 'login', component: Login },
@@ -28,7 +30,9 @@ export const routes: Routes = [
       { path: 'documents', component: Documents },
       { path: 'health', component: Health },
       { path: 'ai-assistant', component: AiAssistant },
-      { path: 'settings', component: Settings }
+      { path: 'settings', component: Settings },
+      { path: 'privacy-policy', component: PrivacyPolicy },
+      { path: 'terms', component: Terms }
     ]
   },
   { path: '**', redirectTo: '' }

@@ -91,13 +91,34 @@
   margin: var(--space-5) 0;
 }
 
-.chart-card h3 {
-  margin-top: 0;
+.charts-grid > .card {
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+}
+
+.charts-grid > .card h3 {
+  margin: 0;
 }
 
 .chart-wrap {
   position: relative;
   height: 260px;
+  margin-top: 8px;
+}
+
+.recent-transactions-card {
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+}
+
+.recent-transactions-card h3 {
+  margin: 0;
+}
+
+.recent-transactions-card .empty {
+  margin: auto 0;
 }
 
 .recent-list {
@@ -141,5 +162,5 @@
 .empty {
   color: var(--color-text-muted);
   text-align: center;
-  margin: var(--space-4) 0;
+  margin: auto 0;
 }

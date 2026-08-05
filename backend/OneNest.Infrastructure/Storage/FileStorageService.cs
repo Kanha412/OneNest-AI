@@ -49,6 +49,17 @@ public class FileStorageService : IFileStorageService
         return Task.CompletedTask;
     }
 
+    public Task DeleteUserDirectoryAsync(Guid userId)
+    {
+        var userDirectory = GetUserDirectory(userId);
+        if (Directory.Exists(userDirectory))
+        {
+            Directory.Delete(userDirectory, recursive: true);
+        }
+
+        return Task.CompletedTask;
+    }
+
     private string GetUserDirectory(Guid userId)
     {
         return Path.Combine(_rootPath, userId.ToString());
