@@ -99,22 +99,31 @@
         @if (isConversationLoading()) {
           <app-spinner message="Loading conversation..." />
         } @else if (!selectedConversation()) {
-          <div class="empty-state welcome-card">
+          <div class="empty-state welcome-card assistant-empty-state">
+            <div class="assistant-empty-icon">✨</div>
             <h3>👋 Hello {{ displayName }}!</h3>
-            <p>Create or select a conversation to begin.</p>
+            <p>Create your first conversation to get personalized help.</p>
+            <div class="assistant-empty-topics">
+              <span>Notes</span>
+              <span>Tasks</span>
+              <span>Health</span>
+              <span>Expenses</span>
+              <span>Documents</span>
+              <span>General Questions</span>
+            </div>
+            <button type="button" class="new-chat-cta" (click)="newChat()">+ Start New Chat</button>
           </div>
         } @else if (!messages().length) {
-          <div class="empty-state welcome-card">
-            <h3>👋 Hello {{ displayName }}!</h3>
-            <p>I can help with:</p>
-            <ul>
-              <li>Notes</li>
-              <li>Tasks</li>
-              <li>Health</li>
-              <li>Expenses</li>
-              <li>Documents</li>
-              <li>General AI questions</li>
-            </ul>
+          <div class="empty-state welcome-card assistant-empty-state">
+            <div class="assistant-empty-icon">💬</div>
+            <h3>Ready when you are</h3>
+            <p>Send your first message in this conversation.</p>
+            <div class="assistant-empty-topics">
+              <span>Plan my day</span>
+              <span>Summarize notes</span>
+              <span>Track health</span>
+              <span>Review expenses</span>
+            </div>
           </div>
         } @else {
           @for (message of messages(); track message.id) {
@@ -159,26 +168,28 @@
         }
       </div>
 
-      <form class="composer" [formGroup]="chatForm" (ngSubmit)="send()">
-        <textarea
-          formControlName="message"
-          rows="3"
-          placeholder="Ask anything..."
-          [disabled]="isSending() || !selectedConversationId()"
-          (keydown)="onComposerKeyDown($event)"></textarea>
+      @if (canShowComposer()) {
+        <form class="composer" [formGroup]="chatForm" (ngSubmit)="send()">
+          <textarea
+            formControlName="message"
+            rows="3"
+            placeholder="Ask anything..."
+            [disabled]="isSending() || !selectedConversationId()"
+            (keydown)="onComposerKeyDown($event)"></textarea>
 
-        <div class="composer-footer">
-          <!--<span class="shortcut-hint">Enter → Send &nbsp;&nbsp; Shift+Enter → New line</span>-->
-          <div class="composer-actions">
-            @if (isSending()) {
-              <app-spinner message="Generating response..." />
-            }
-            <button type="submit" class="send-btn" [disabled]="chatForm.invalid || isSending() || !selectedConversationId()" aria-label="Send message">
-              <span aria-hidden="true" style=" position: relative; left: -8px;">➤</span>
-            </button>
+          <div class="composer-footer">
+            <!--<span class="shortcut-hint">Enter → Send &nbsp;&nbsp; Shift+Enter → New line</span>-->
+            <div class="composer-actions">
+              @if (isSending()) {
+                <app-spinner message="Generating response..." />
+              }
+              <button type="submit" class="send-btn" [disabled]="chatForm.invalid || isSending() || !selectedConversationId()" aria-label="Send message">
+                <span aria-hidden="true" style=" position: relative; left: -8px;">➤</span>
+              </button>
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      }
     </section>
   </div>
 </section>

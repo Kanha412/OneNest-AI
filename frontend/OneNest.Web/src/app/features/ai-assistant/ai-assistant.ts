@@ -85,6 +85,8 @@ export class AiAssistant implements OnInit, AfterViewChecked {
     );
   });
 
+  readonly canShowComposer = computed(() => !!this.selectedConversationId());
+
   readonly messages = computed<ChatMessageResponse[]>(() =>
     this.selectedConversation()?.messages ?? []
   );
