@@ -1,59 +1,239 @@
-# OneNestWeb
+# OneNest AI - Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.2.
+The frontend application for **OneNest AI**, built with **Angular 22**.
 
-## Development server
+OneNest AI is an AI-powered personal workspace that combines productivity, document management, health tracking, expense management, and contextual AI assistance into a single platform.
 
-To start a local development server, run:
+---
+
+## Tech Stack
+
+- Angular 22
+- TypeScript
+- HTML5
+- CSS3
+- RxJS
+- Angular Router
+- HttpClient
+- Chart.js
+- JWT Authentication
+
+---
+
+## Features
+
+### Authentication
+
+- User Registration
+- Secure Login
+- JWT Authentication
+- Protected Routes
+
+### Dashboard
+
+- Overview Cards
+- Expense Charts
+- Task Statistics
+- Health Summary
+- Recent Activity
+
+### Notes
+
+- Create Notes
+- Edit Notes
+- Delete Notes
+- Search Notes
+
+### Tasks
+
+- Task Management
+- Status Tracking
+- Priority Levels
+- Due Dates
+
+### Expenses
+
+- Expense Tracking
+- Category Management
+- Monthly Analytics
+- Charts & Reports
+
+### Documents
+
+- File Upload
+- Document Library
+- Search Documents
+
+### Health
+
+- Appointments
+- Reports
+- Medicines
+- Health Dashboard
+
+### AI Assistant
+
+- Persistent Conversations
+- Workspace-aware Responses
+- Conversation History
+- Archive Conversations
+- AI Tool Selection
+- Context-aware Answers
+
+### Settings
+
+- Account Settings
+- AI Preferences
+- Privacy & Security
+- Documents
+- Health
+- About
+
+---
+
+## Project Structure
+
+```
+src/
+│
+├── app/
+│   ├── core/
+│   ├── shared/
+│   ├── features/
+│   │
+│   ├── dashboard/
+│   ├── notes/
+│   ├── tasks/
+│   ├── expenses/
+│   ├── documents/
+│   ├── health/
+│   ├── ai-assistant/
+│   └── settings/
+│
+├── assets/
+└── environments/
+```
+
+---
+
+## Running the Project
+
+Install dependencies
+
+```bash
+npm install
+```
+
+Start development server
 
 ```bash
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Application
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+```
+http://localhost:4200
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+---
 
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
+## Production Build
 
 ```bash
 ng build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+The production build is generated inside:
 
-## Running unit tests
+```
+dist/
+```
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+---
+
+## Development Commands
+
+Run Development Server
+
+```bash
+ng serve
+```
+
+Build
+
+```bash
+ng build
+```
+
+Run Tests
 
 ```bash
 ng test
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+Lint
 
 ```bash
-ng e2e
+ng lint
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+---
 
-## Additional Resources
+## Backend
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+This frontend communicates with the ASP.NET Core backend located at:
+
+```
+/backend
+```
+
+---
+
+## Documentation
+
+Additional documentation is available in the project root:
+
+- docs/API.md
+- docs/Database.md
+- docs/Infrastructure.md
+- docs/UI.md
+- docs/Vision.md
+- docs/Roadmap.md
+
+---
+
+## Current Version
+
+**Version:** 1.0.0
+
+Current major features:
+
+- Workspace-aware AI
+- Persistent Conversations
+- JWT Authentication
+- Health Management
+- Expense Tracking
+- Notes
+- Tasks
+- Documents
+- Modern Settings
+
+---
+
+## Future Enhancements
+
+- Dark Mode
+- AI Memory Improvements
+- Smart Notifications
+- OCR for Documents
+- Voice Assistant
+- Mobile Responsive Enhancements
+
+---
+
+## Developed By
+
+**Kanha Gupta**
+
+OneNest AI © 2026

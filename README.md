@@ -1,94 +1,226 @@
-![.NET](https://img.shields.io/badge/.NET-9.0-blueviolet)
-![Angular](https://img.shields.io/badge/Angular-20-red)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Status](https://img.shields.io/badge/status-Active-success)
+<div align="center">
 
 # 🏡 OneNest AI
 
-> An AI-powered personal productivity and life management platform built with **ASP.NET Core**, **Angular**, **PostgreSQL**, and **Google Gemini**.
+### Your Intelligent Personal Life Management Platform
 
-OneNest AI brings together Notes, Tasks, Expenses, Documents, Health Management, and an intelligent AI Assistant into a single workspace-aware application.
+A modern, AI-powered personal productivity platform that unifies **Notes**, **Tasks**, **Expenses**, **Documents**, **Health Tracking**, and a **Workspace-Aware AI Assistant** into one seamless application.
+
+![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
+![Angular](https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?logo=postgresql&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-success)
+![Status](https://img.shields.io/badge/Status-Active-success)
+
+</div>
 
 ---
 
-# ✨ Features
+# 📸 Application Preview
 
-## 🤖 AI Assistant
+## Dashboard
 
-- Persistent AI conversations
-- Context-aware responses
-- Workspace-aware AI
-- Conversation history
-- Multi-chat support
-- Rename, Archive & Delete conversations
-- Copy AI responses
-- Markdown rendering
-- AI source badges
-- Gemini integration
+![Dashboard](assets/screenshots/dashboard.png)
+
+---
+
+## AI Assistant
+
+![AI Assistant](assets/screenshots/ai-assistant.png)
+
+---
+
+## Settings
+
+![Settings](assets/screenshots/settings.png)
+
+---
+
+# ✨ Overview
+
+OneNest AI is a **full-stack SaaS-inspired personal management platform** designed to centralize everyday productivity.
+
+Instead of using multiple applications for notes, expenses, health records, appointments, documents, and AI assistance, OneNest provides everything inside one secure workspace.
+
+The application combines a modern Angular frontend, ASP.NET Core backend, PostgreSQL database, and AI-powered contextual assistance to deliver an intelligent personal workspace.
+
+---
+
+# 🚀 Current Features
+
+## 🔐 Authentication
+
+- JWT Authentication
+- User Registration
+- Login
+- Change Password
+- Delete Account
+- Protected Routes
 
 ---
 
 ## 📝 Notes
 
-- Create notes
-- Update notes
-- Delete notes
-- Search notes
-- Rich note management
+- Create Notes
+- Edit Notes
+- Delete Notes
+- Search Notes
 
 ---
 
 ## ✅ Tasks
 
-- Task creation
-- Status tracking
-- Due dates
-- Priority management
-- Completion tracking
+- Task Management
+- Due Dates
+- Completion Tracking
+- Filtering
 
 ---
 
-## 💰 Expense Management
+## 💰 Expenses
 
-- Add expenses
-- Expense categories
-- Dashboard analytics
-- Monthly summaries
-- INR currency support
-
----
-
-## 📄 Documents
-
-- Document storage
-- Metadata management
-- Document categorization
+- Expense Tracking
+- Monthly Summary
+- Category Analytics
+- Dashboard Charts
 
 ---
 
-## 🏥 Health
+## 📂 Documents
 
-- Medical appointments
-- Health reports
-- Doctor tracking
+- Upload Documents
+- Download Documents
+- Preview Files
+- Bulk Download (ZIP)
+- Delete All
+- Storage Summary
+
+---
+
+## 🏥 Health Workspace
+
+- Medicines
+- Appointments
+- Medical Records
+- Medical Reports
+- Dashboard Integration
+
+---
+
+## 🤖 AI Assistant
+
+- Persistent Conversations
+- Conversation History
+- Conversation Archive
+- Workspace-aware Responses
+- Context Injection
+- Tool Orchestration
+- AI Metadata
+- Smart Conversation Management
 
 ---
 
 ## ⚙ Settings
 
-- Account management
+- Account Settings
 - AI Preferences
 - Documents
-- Health
+- Health Preferences
 - Privacy & Security
 - About
 
 ---
 
-# 🏗 Architecture
+# 🧠 AI Architecture
 
-The project follows **Clean Architecture**.
+OneNest AI doesn't simply send prompts to an LLM.
+
+Instead, it intelligently determines whether the user's question requires workspace data before generating a response.
+
+```text
+                    User
+
+                      │
+
+                      ▼
+
+             AI Conversation Service
+
+                      │
+
+                      ▼
+
+          Workspace Tool Orchestrator
+
+       ┌────────┬─────────┬─────────┬──────────┬─────────┐
+       │ Notes  │ Tasks   │Expenses │Documents │ Health  │
+       └────────┴─────────┴─────────┴──────────┴─────────┘
+
+                      │
+
+             Workspace Context
+
+                      │
+
+                      ▼
+
+               AI Model (Gemini)
+
+                      │
+
+                      ▼
+
+             Intelligent Response
+
+                      │
+
+                      ▼
+
+      Conversation Stored + Metadata
+```
+
+---
+
+# 🏗 Technology Stack
+
+## Frontend
+
+- Angular
+- TypeScript
+- RxJS
+- Angular Signals
+- Reactive Forms
+- Chart.js
+
+---
+
+## Backend
+
+- ASP.NET Core Web API
+- .NET 10
+- Entity Framework Core
+- Repository Pattern
+- Clean Architecture
+- JWT Authentication
+
+---
+
+## Database
+
+- PostgreSQL
+
+---
+
+## AI
+
+- Gemini API
+- Workspace Tool Orchestrator
+- Persistent Conversation Memory
+- AI Context Injection
+
+---
+
+# 🏛 Project Architecture
 
 ```
 OneNest-AI
@@ -102,113 +234,63 @@ OneNest-AI
 ├── frontend
 │   └── OneNest.Web
 │
-├── database
-│
 ├── docs
 │
-└── scripts
+├── database
+│
+├── scripts
+│
+└── assets
 ```
-
----
-
-# 🛠 Tech Stack
-
-## Backend
-
-- ASP.NET Core Web API
-- Entity Framework Core
-- PostgreSQL
-- JWT Authentication
-- Clean Architecture
-- Repository Pattern
-- Dependency Injection
-
----
-
-## Frontend
-
-- Angular
-- TypeScript
-- HTML
-- CSS
-- RxJS
-
----
-
-## AI
-
-- Google Gemini API
-- Workspace Tool Orchestration
-- Context Injection
-- Conversation Persistence
-
----
-
-## Database
-
-- PostgreSQL
-- Entity Framework Core Migrations
-
----
-
-# 📁 Project Structure
-
-| Folder | Purpose |
-|---------|----------|
-| backend | Backend source code |
-| frontend | Angular application |
-| database | Database scripts and backups |
-| docs | Technical documentation |
-| scripts | Utility scripts |
-| assets | Images, logos and resources |
-
----
-
-# 🚀 Current AI Capabilities
-
-✔ Persistent Conversations
-
-✔ Workspace Context
-
-✔ Notes Integration
-
-✔ Tasks Integration
-
-✔ Expense Integration
-
-✔ Health Integration
-
-✔ Conversation History
-
-✔ AI Tool Selection
-
-✔ Contextual Responses
 
 ---
 
 # 📚 Documentation
 
-Detailed documentation is available inside the **docs/** folder.
+Detailed project documentation is available under the **docs** folder.
 
-- API.md
-- Database.md
-- Infrastructure.md
-- UI.md
-- Vision.md
-- Roadmap.md
+| Document | Description |
+|-----------|-------------|
+| API.md | REST API documentation |
+| Database.md | Database schema |
+| Infrastructure.md | Backend architecture |
+| UI.md | Frontend architecture |
+| Roadmap.md | Product roadmap |
+| Vision.md | Long-term vision |
 
 ---
 
-# 🚀 Getting Started
+# ⚡ Getting Started
+
+## Prerequisites
+
+- .NET 10 SDK
+- Node.js
+- npm
+- PostgreSQL
+
+---
+
+## Clone Repository
+
+```bash
+git clone https://github.com/Kanha412/OneNest-AI.git
+
+cd OneNest-AI
+```
+
+---
 
 ## Backend
 
 ```bash
-cd backend
+cd backend/OneNest.API
 
 dotnet restore
 
-dotnet ef database update
+dotnet ef database update \
+--project ../OneNest.Infrastructure \
+--startup-project .
 
 dotnet run
 ```
@@ -222,10 +304,14 @@ cd frontend/OneNest.Web
 
 npm install
 
-ng serve
+npm start
 ```
 
-Application runs at
+---
+
+# 🌐 Local URLs
+
+Frontend
 
 ```
 http://localhost:4200
@@ -237,56 +323,74 @@ Backend
 https://localhost:5001
 ```
 
----
+Swagger
 
-# 📸 Screenshots
-
-> Add screenshots here as the project evolves.
-
-- Dashboard
-- AI Assistant
-- Notes
-- Tasks
-- Expenses
-- Documents
-- Health
-- Settings
+```
+https://localhost:5001/swagger
+```
 
 ---
 
 # 🛣 Roadmap
 
-- AI Memory Improvements
-- AI Tool Planning
-- Smart Suggestions
-- OCR
+## ✅ Phase 1
+
+Authentication
+
+---
+
+## ✅ Phase 2
+
+Workspace Modules
+
+- Notes
+- Tasks
+- Expenses
+- Documents
+- Health
+
+---
+
+## ✅ Phase 3
+
+Workspace-aware AI
+
+- Persistent Conversations
+- Conversation Archive
+- Workspace Context
+- Tool Orchestration
+
+---
+
+## 🚧 Phase 4 (Current)
+
+- AI Tool Planner
+- Smarter Context Selection
+- Better Prompt Orchestration
+
+---
+
+## 🔜 Upcoming
+
+- Smart AI Memory
+- AI Recommendations
+- Dashboard Insights
+- Semantic Search
+- AI Document Understanding
 - Voice Assistant
-- Image Understanding
-- File Chat
-- AI Reports
-- Notification System
-- Dark Theme
-- Mobile Responsive UI
+- Mobile Responsive Improvements
 
 ---
 
 # 🤝 Contributing
 
-Contributions, suggestions and feature requests are welcome.
+Contributions are welcome.
 
-Please open an Issue or submit a Pull Request.
+Feel free to:
 
----
-
-# 👨‍💻 Author
-
-**Kanha Gupta**
-
-Software Engineer
-
-GitHub: https://github.com/Kanha412
-
-LinkedIn: *(Add your LinkedIn profile)*
+- Open Issues
+- Suggest Features
+- Submit Pull Requests
 
 ---
 
@@ -296,4 +400,26 @@ This project is licensed under the MIT License.
 
 ---
 
-⭐ If you like this project, consider giving it a star.
+# 👨‍💻 Developer
+
+**Kanha Gupta**
+
+Custom Software Engineering Analyst @ Accenture
+
+.NET Full Stack Developer
+
+GitHub
+
+https://github.com/Kanha412
+
+LinkedIn
+
+https://linkedin.com/in/kanhagupta412
+
+---
+
+<div align="center">
+
+### ⭐ If you like this project, consider giving it a Star!
+
+</div>
