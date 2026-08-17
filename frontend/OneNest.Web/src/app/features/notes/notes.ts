@@ -179,10 +179,16 @@ cancelEdit() {
 
 togglePin(id: string) {
 
+  const note = this.notes().find(n => n.id === id);
+  const wasPinned = note?.isPinned;
+
   this.notesService
       .togglePin(id)
       .subscribe({
-        next: () => this.loadNotes(),
+        next: () => {
+          this.loadNotes();
+          this.toastService.success(wasPinned ? 'Note unpinned' : 'Note pinned');
+        },
         error: () => this.toastService.error('Failed to update note')
       });
 

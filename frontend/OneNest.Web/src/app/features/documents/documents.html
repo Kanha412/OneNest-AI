@@ -92,7 +92,7 @@
 
       <button
         type="submit"
-        [disabled]="isSaving()">
+        [disabled]="documentForm.invalid || isSaving()">
 
         {{ isSaving() ? 'Saving...' : (editingId() ? 'Update Document' : 'Upload Document') }}
 

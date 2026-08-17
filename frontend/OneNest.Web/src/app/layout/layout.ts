@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Confirm } from '../shared/confirm/confirm';
 import { Toast } from '../shared/toast/toast';
@@ -17,16 +17,18 @@ export class Layout {
   private confirmService = inject(ConfirmService);
 
   protected readonly currentUser = this.authService.currentUser;
+  protected readonly isAdmin = computed(() => this.authService.currentUser()?.role === 'Admin');
 
   protected readonly menu = [
-    { label: 'Dashboard', path: 'dashboard' },
-    { label: 'Notes', path: 'notes' },
-    { label: 'Tasks', path: 'tasks' },
-    { label: 'Expenses', path: 'expenses' },
-    { label: 'Documents', path: 'documents' },
-    { label: 'Health', path: 'health' },
-    { label: 'AI Assistant', path: 'ai-assistant' },
-    { label: 'Settings', path: 'settings' }
+    { label: '📊 Dashboard', path: 'dashboard' },
+    { label: '📝 Notes', path: 'notes' },
+    { label: '✅ Tasks', path: 'tasks' },
+    { label: '💸 Expenses', path: 'expenses' },
+    { label: '📄 Documents', path: 'documents' },
+    { label: '🏥 Health', path: 'health' },
+    { label: '🤖 AI Assistant', path: 'ai-assistant' },
+    { label: '✉ Contact', path: 'contact' },
+    { label: '⚙ Settings', path: 'settings' }
   ];
 
   async logout(): Promise<void> {

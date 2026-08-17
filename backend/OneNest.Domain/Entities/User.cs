@@ -15,4 +15,6 @@ public class User
     public DateTime? UpdatedAt { get; set; }
 
     public DateTime? LastLoginAt { get; set; }
+
+    public string Role { get; set; } = "User";
 }

@@ -63,6 +63,10 @@ public static class DependencyInjection
         services.AddScoped<IAIConversationService, AIConversationService>();
         services.AddScoped<IAIService, AIService>();
 
+        services.AddScoped<IContactRepository, ContactRepository>();
+        services.AddScoped<IContactService, ContactService>();
+        services.AddScoped<IAdminService, AdminService>();
+
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUserSettingsRepository, UserSettingsRepository>();
         services.AddScoped<IAuthService, AuthService>();

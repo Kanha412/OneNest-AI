@@ -121,6 +121,7 @@ public class AuthService : IAuthService
             UserId = user.Id,
             FullName = user.FullName,
             Email = user.Email,
+            Role = user.Role,
             Token = token,
             ExpiresAt = expiresAt
         };

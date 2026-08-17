@@ -1,0 +1,113 @@
+<section class="page">
+
+  <h1>✉ Contact Us</h1>
+  <p class="page-subtitle">Submit a message to our team. We'll get back to you as soon as possible.</p>
+
+  <!-- ── Submit Form ─────────────────────────────────────── -->
+  <form [formGroup]="contactForm" (ngSubmit)="submit()" class="contact-form card">
+
+    <div class="form-row">
+
+      <div class="form-group">
+        <label>Subject</label>
+        <input
+          type="text"
+          formControlName="subject"
+          placeholder="Brief description of your query"
+          [class.is-invalid]="contactForm.controls.subject.invalid && contactForm.controls.subject.touched">
+        @if (contactForm.controls.subject.invalid && contactForm.controls.subject.touched) {
+          <small class="field-error">Subject is required (max 200 characters).</small>
+        }
+      </div>
+
+      <div class="form-group">
+        <label>Category</label>
+        <select formControlName="category">
+          @for (cat of categories; track cat) {
+            <option [ngValue]="cat">{{ categoryLabels[cat] }}</option>
+          }
+        </select>
+      </div>
+
+    </div>
+
+    <div class="form-group">
+      <label>Message</label>
+      <textarea
+        rows="5"
+        formControlName="message"
+        placeholder="Describe your issue or question in detail..."
+        [class.is-invalid]="contactForm.controls.message.invalid && contactForm.controls.message.touched">
+      </textarea>
+      @if (contactForm.controls.message.invalid && contactForm.controls.message.touched) {
+        <small class="field-error">Message is required (max 2000 characters).</small>
+      }
+    </div>
+
+    <div class="form-actions">
+      <button
+        type="submit"
+        [disabled]="contactForm.invalid || isSaving()">
+        {{ isSaving() ? 'Sending...' : 'Send Message' }}
+      </button>
+    </div>
+
+  </form>
+
+  <!-- ── Message History ────────────────────────────────── -->
+  <div class="history-header">
+    <h2>My Messages</h2>
+    @if (messages().length) {
+      <div class="history-stats">
+        <span class="badge badge-new">{{ newCount() }} New</span>
+        <span class="badge badge-resolved">{{ resolvedCount() }} Resolved</span>
+      </div>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <app-spinner />
+  } @else if (!messages().length) {
+    <p class="empty">No messages yet. Use the form above to get in touch.</p>
+  } @else {
+    <div class="message-list">
+      @for (msg of messages(); track msg.id) {
+        <div class="message-card card" [class.expanded]="expandedId() === msg.id">
+
+          <div class="message-summary" (click)="toggleExpand(msg.id)">
+            <div class="message-left">
+              <span class="message-subject">{{ msg.subject }}</span>
+              <small class="message-meta">
+                {{ categoryLabels[msg.category] }} · {{ msg.createdAt | date:'dd MMM yyyy, hh:mm a' }}
+              </small>
+            </div>
+            <div class="message-right">
+              <span class="badge" [class]="statusClass(msg.status)">{{ statusLabels[msg.status] }}</span>
+              <span class="expand-icon">{{ expandedId() === msg.id ? '▲' : '▼' }}</span>
+            </div>
+          </div>
+
+          @if (expandedId() === msg.id) {
+            <div class="message-detail">
+              <div class="detail-section">
+                <label>Your Message</label>
+                <p>{{ msg.message }}</p>
+              </div>
+              @if (msg.adminReply) {
+                <div class="detail-section admin-reply">
+                  <label>🛡 Admin Reply</label>
+                  <p>{{ msg.adminReply }}</p>
+                  @if (msg.updatedAt) {
+                    <small>Replied on {{ msg.updatedAt | date:'dd MMM yyyy, hh:mm a' }}</small>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+        </div>
+      }
+    </div>
+  }
+
+</section>

@@ -177,6 +177,10 @@
             [disabled]="isSending() || !selectedConversationId()"
             (keydown)="onComposerKeyDown($event)"></textarea>
 
+          @if (chatForm.controls.message.hasError('maxlength') && chatForm.controls.message.touched) {
+            <small class="field-error">Message cannot exceed 8,000 characters.</small>
+          }
+
           <div class="composer-footer">
             <!--<span class="shortcut-hint">Enter → Send &nbsp;&nbsp; Shift+Enter → New line</span>-->
             <div class="composer-actions">

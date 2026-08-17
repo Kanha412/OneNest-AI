@@ -245,10 +245,16 @@ cancelEdit(){
 
 toggleComplete(id:string){
 
+    const task = this.tasks().find(t => t.id === id);
+    const wasCompleted = task?.isCompleted;
+
     this.service
         .toggleComplete(id)
         .subscribe({
-          next: () => this.loadTasks(),
+          next: () => {
+            this.loadTasks();
+            this.toastService.success(wasCompleted ? 'Task marked incomplete' : 'Task completed');
+          },
           error: () => this.toastService.error('Failed to update task')
         });
 

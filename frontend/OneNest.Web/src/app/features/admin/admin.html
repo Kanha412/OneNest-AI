@@ -1,0 +1,170 @@
+<section class="page">
+
+  <h1>🛡 Admin Panel</h1>
+
+  <div class="tabs">
+    <button type="button" [class.active]="activeTab() === 'messages'" (click)="setTab('messages')">
+      Messages
+      @if (newCount() > 0) {
+        <span class="tab-badge">{{ newCount() }}</span>
+      }
+    </button>
+    <button type="button" [class.active]="activeTab() === 'users'" (click)="setTab('users')">Users</button>
+  </div>
+
+  <!-- ══════════════ MESSAGES TAB ══════════════ -->
+  @if (activeTab() === 'messages') {
+    <div class="tab-content">
+
+      <div class="filters">
+        <select (change)="statusFilter.set($any($event.target).value === 'all' ? 'all' : +$any($event.target).value)">
+          <option value="all">All Status</option>
+          @for (s of statuses; track s) {
+            <option [value]="s">{{ statusLabels[s] }}</option>
+          }
+        </select>
+        <span class="filter-count">{{ filteredMessages().length }} message{{ filteredMessages().length !== 1 ? 's' : '' }}</span>
+      </div>
+
+      @if (messagesLoading()) {
+        <app-spinner />
+      } @else if (!filteredMessages().length) {
+        <p class="empty">No messages found.</p>
+      } @else {
+        <div class="message-list">
+          @for (msg of filteredMessages(); track msg.id) {
+            <div class="message-card card" [class.expanded]="expandedMessageId() === msg.id">
+
+              <div class="message-summary" (click)="toggleMessage(msg.id)">
+                <div class="msg-left">
+                  <span class="msg-subject">{{ msg.subject }}</span>
+                  <small class="msg-meta">
+                    {{ msg.userName }} ({{ msg.userEmail }}) · {{ categoryLabels[msg.category] }} · {{ msg.createdAt | date:'dd MMM yyyy' }}
+                  </small>
+                </div>
+                <div class="msg-right">
+                  <span class="badge" [class]="statusClass(msg.status)">{{ statusLabels[msg.status] }}</span>
+                  <span class="expand-icon">{{ expandedMessageId() === msg.id ? '▲' : '▼' }}</span>
+                </div>
+              </div>
+
+              @if (expandedMessageId() === msg.id) {
+                <div class="message-detail">
+
+                  <div class="detail-section">
+                    <label>Message</label>
+                    <p>{{ msg.message }}</p>
+                  </div>
+
+                  @if (msg.adminReply && replyingId() !== msg.id) {
+                    <div class="detail-section admin-reply-view">
+                      <label>🛡 Admin Reply</label>
+                      <p>{{ msg.adminReply }}</p>
+                    </div>
+                  }
+
+                  @if (replyingId() === msg.id) {
+                    <form [formGroup]="replyForm" (ngSubmit)="saveReply(msg.id)" class="reply-form">
+
+                      <div class="form-group">
+                        <label>Update Status</label>
+                        <select formControlName="status">
+                          @for (s of statuses; track s) {
+                            <option [ngValue]="s">{{ statusLabels[s] }}</option>
+                          }
+                        </select>
+                      </div>
+
+                      <div class="form-group">
+                        <label>Admin Reply (optional)</label>
+                        <textarea rows="3" formControlName="adminReply" placeholder="Reply to the user..."></textarea>
+                      </div>
+
+                      <div class="form-actions">
+                        <button type="submit" [disabled]="isSavingReply()">
+                          {{ isSavingReply() ? 'Saving...' : 'Save' }}
+                        </button>
+                        <button type="button" class="secondary" (click)="cancelReply()">Cancel</button>
+                      </div>
+
+                    </form>
+                  } @else {
+                    <div class="detail-actions">
+                      <button type="button" (click)="openReplyForm(msg)">
+                        {{ msg.adminReply ? 'Edit Reply' : 'Reply / Update Status' }}
+                      </button>
+                    </div>
+                  }
+
+                </div>
+              }
+
+            </div>
+          }
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ══════════════ USERS TAB ══════════════ -->
+  @if (activeTab() === 'users') {
+    <div class="tab-content">
+
+      <div class="filters">
+        <input
+          type="text"
+          placeholder="Search by name or email..."
+          [value]="userSearch()"
+          (input)="userSearch.set($any($event.target).value)" />
+        <span class="filter-count">{{ filteredUsers().length }} user{{ filteredUsers().length !== 1 ? 's' : '' }}</span>
+      </div>
+
+      @if (usersLoading()) {
+        <app-spinner />
+      } @else if (!filteredUsers().length) {
+        <p class="empty">No users found.</p>
+      } @else {
+        <div class="user-table">
+          <div class="table-header">
+            <span>Name</span>
+            <span>Email</span>
+            <span>Role</span>
+            <span>Joined</span>
+            <span>Last Login</span>
+            <span>Action</span>
+          </div>
+          @for (user of filteredUsers(); track user.id) {
+            <div class="table-row" [class.self-row]="user.id === currentUserId()">
+              <span class="user-name">{{ user.fullName }}</span>
+              <span class="user-email">{{ user.email }}</span>
+              <span>
+                <span class="badge" [class]="user.role === 'Admin' ? 'badge-admin' : 'badge-user'">
+                  {{ user.role }}
+                </span>
+              </span>
+              <span>{{ user.createdAt | date:'dd MMM yyyy' }}</span>
+              <span>{{ user.lastLoginAt ? (user.lastLoginAt | date:'dd MMM yyyy') : '—' }}</span>
+              <span>
+                @if (user.id === currentUserId()) {
+                  <span class="self-label">You</span>
+                } @else {
+                  <button
+                    type="button"
+                    class="role-btn"
+                    [class.danger]="user.role === 'Admin'"
+                    [disabled]="updatingUserId() === user.id"
+                    (click)="toggleRole(user)">
+                    {{ updatingUserId() === user.id ? '...' : (user.role === 'Admin' ? 'Revoke Admin' : 'Make Admin') }}
+                  </button>
+                }
+              </span>
+            </div>
+          }
+        </div>
+      }
+
+    </div>
+  }
+
+</section>

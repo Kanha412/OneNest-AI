@@ -205,16 +205,28 @@
           <p class="modal-subtitle">Use a strong password with at least 6 characters.</p>
           <div class="form-group spaced-block">
             <label>Current Password</label>
-            <input type="password" [formControl]="changePasswordForm.controls.currentPassword" />
+            <input type="password" [formControl]="changePasswordForm.controls.currentPassword"
+              [class.is-invalid]="changePasswordForm.controls.currentPassword.invalid && changePasswordForm.controls.currentPassword.touched" />
+            @if (changePasswordForm.controls.currentPassword.invalid && changePasswordForm.controls.currentPassword.touched) {
+              <small class="field-error">Current password is required.</small>
+            }
           </div>
           <div class="row security-password-row">
             <div class="form-group">
               <label>New Password</label>
-              <input type="password" [formControl]="changePasswordForm.controls.newPassword" />
+              <input type="password" [formControl]="changePasswordForm.controls.newPassword"
+                [class.is-invalid]="changePasswordForm.controls.newPassword.invalid && changePasswordForm.controls.newPassword.touched" />
+              @if (changePasswordForm.controls.newPassword.invalid && changePasswordForm.controls.newPassword.touched) {
+                <small class="field-error">New password must be at least 6 characters.</small>
+              }
             </div>
             <div class="form-group">
               <label>Confirm Password</label>
-              <input type="password" [formControl]="changePasswordForm.controls.confirmPassword" />
+              <input type="password" [formControl]="changePasswordForm.controls.confirmPassword"
+                [class.is-invalid]="changePasswordForm.controls.confirmPassword.invalid && changePasswordForm.controls.confirmPassword.touched" />
+              @if (changePasswordForm.controls.confirmPassword.invalid && changePasswordForm.controls.confirmPassword.touched) {
+                <small class="field-error">Please confirm your new password.</small>
+              }
             </div>
           </div>
           <div class="actions modal-actions">
@@ -237,7 +249,11 @@
           <p class="modal-subtitle danger-text">This action is permanent. Enter your password to confirm deletion.</p>
           <div class="form-group spaced-block">
             <label>Confirm Password</label>
-            <input type="password" [formControl]="deleteAccountForm.controls.password" placeholder="Enter your password" />
+            <input type="password" [formControl]="deleteAccountForm.controls.password" placeholder="Enter your password"
+              [class.is-invalid]="deleteAccountForm.controls.password.invalid && deleteAccountForm.controls.password.touched" />
+            @if (deleteAccountForm.controls.password.invalid && deleteAccountForm.controls.password.touched) {
+              <small class="field-error">Password is required to delete your account.</small>
+            }
           </div>
           <div class="actions modal-actions">
             <button type="button" class="btn-outline" (click)="closeDeleteAccountModal()">Cancel</button>

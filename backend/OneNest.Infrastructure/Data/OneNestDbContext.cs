@@ -22,6 +22,7 @@ public class OneNestDbContext : DbContext
     public DbSet<AIConversation> AIConversations => Set<AIConversation>();
     public DbSet<AIMessage> AIMessages => Set<AIMessage>();
     public DbSet<UserSettings> UserSettings => Set<UserSettings>();
+    public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

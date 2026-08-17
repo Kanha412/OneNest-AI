@@ -1,11 +1,13 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
 import { NotesService } from '../../services/notes.service';
 import { TasksService } from '../../services/tasks.service';
 import { ExpensesService } from '../../services/expenses.service';
 import { DocumentsService } from '../../services/documents.service';
 import { HealthHubService } from '../../services/health-hub.service';
+import { ToastService } from '../../shared/toast/toast.service';
 import {
   ExpenseSummary,
   EXPENSE_CATEGORY_LABELS,
@@ -32,6 +34,7 @@ export class Dashboard {
   private readonly expensesService = inject(ExpensesService);
   private readonly documentsService = inject(DocumentsService);
   private readonly healthHubService = inject(HealthHubService);
+  private readonly toastService = inject(ToastService);
 
   readonly TransactionType = TransactionType;
   readonly categoryLabels = EXPENSE_CATEGORY_LABELS;
@@ -42,33 +45,65 @@ export class Dashboard {
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
   ];
 
-  private readonly notes = toSignal(this.notesService.getNotes(), {
-    initialValue: []
-  });
+  // Track whether any critical API call failed (prevents infinite spinner)
+  private readonly _hasLoadError = signal(false);
+  readonly hasLoadError = this._hasLoadError.asReadonly();
 
-  private readonly tasks = toSignal(this.tasksService.getTasks(), {
-    initialValue: []
-  });
+  private readonly notes = toSignal(
+    this.notesService.getNotes().pipe(catchError(() => of([]))),
+    { initialValue: [] }
+  );
+
+  private readonly tasks = toSignal(
+    this.tasksService.getTasks().pipe(catchError(() => of([]))),
+    { initialValue: [] }
+  );
 
   private readonly summary = toSignal<ExpenseSummary | null>(
-    this.expensesService.getSummary(),
+    this.expensesService.getSummary().pipe(
+      catchError(() => {
+        if (!this._hasLoadError()) {
+          this._hasLoadError.set(true);
+          this.toastService.error('Failed to load dashboard data. Please refresh.');
+        }
+        return of(null);
+      })
+    ),
     { initialValue: null }
   );
 
   private readonly documentSummary = toSignal<DocumentSummary | null>(
-    this.documentsService.getSummary(),
+    this.documentsService.getSummary().pipe(
+      catchError(() => {
+        if (!this._hasLoadError()) {
+          this._hasLoadError.set(true);
+          this.toastService.error('Failed to load dashboard data. Please refresh.');
+        }
+        return of(null);
+      })
+    ),
     { initialValue: null }
   );
 
   private readonly healthSummary = toSignal<HealthSummary | null>(
-    this.healthHubService.getSummary(),
+    this.healthHubService.getSummary().pipe(
+      catchError(() => {
+        if (!this._hasLoadError()) {
+          this._hasLoadError.set(true);
+          this.toastService.error('Failed to load dashboard data. Please refresh.');
+        }
+        return of(null);
+      })
+    ),
     { initialValue: null }
   );
 
   readonly isLoading = computed(() =>
-    this.summary() === null ||
-    this.documentSummary() === null ||
-    this.healthSummary() === null
+    !this._hasLoadError() && (
+      this.summary() === null ||
+      this.documentSummary() === null ||
+      this.healthSummary() === null
+    )
   );
 
   readonly totalNotes = computed(() => this.notes().length);

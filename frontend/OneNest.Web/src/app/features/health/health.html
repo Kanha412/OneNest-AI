@@ -44,7 +44,11 @@
 
         <div class="form-group">
           <label>Start Date</label>
-          <input type="date" formControlName="startDate">
+          <input type="date" formControlName="startDate"
+            [class.is-invalid]="medicineForm.controls.startDate.invalid && medicineForm.controls.startDate.touched">
+          @if (medicineForm.controls.startDate.invalid && medicineForm.controls.startDate.touched) {
+            <small class="field-error">Start date is required.</small>
+          }
         </div>
 
         <div class="form-group">
@@ -68,7 +72,7 @@
         </div>
 
         <div class="form-actions span-2">
-          <button type="submit" [disabled]="medicineSaving()">
+          <button type="submit" [disabled]="medicineForm.invalid || medicineSaving()">
             {{ medicineSaving() ? 'Saving...' : (editingMedicineId() ? 'Update Medicine' : 'Add Medicine') }}
           </button>
           @if (editingMedicineId()) {
@@ -161,12 +165,20 @@
 
         <div class="form-group">
           <label>Date</label>
-          <input type="date" formControlName="date">
+          <input type="date" formControlName="date"
+            [class.is-invalid]="appointmentForm.controls.date.invalid && appointmentForm.controls.date.touched">
+          @if (appointmentForm.controls.date.invalid && appointmentForm.controls.date.touched) {
+            <small class="field-error">Date is required.</small>
+          }
         </div>
 
         <div class="form-group">
           <label>Time</label>
-          <input type="time" formControlName="time">
+          <input type="time" formControlName="time"
+            [class.is-invalid]="appointmentForm.controls.time.invalid && appointmentForm.controls.time.touched">
+          @if (appointmentForm.controls.time.invalid && appointmentForm.controls.time.touched) {
+            <small class="field-error">Time is required.</small>
+          }
         </div>
 
         <div class="form-group span-2">
@@ -175,7 +187,7 @@
         </div>
 
         <div class="form-actions span-2">
-          <button type="submit" [disabled]="appointmentSaving()">
+          <button type="submit" [disabled]="appointmentForm.invalid || appointmentSaving()">
             {{ appointmentSaving() ? 'Saving...' : (editingAppointmentId() ? 'Update Appointment' : 'Add Appointment') }}
           </button>
           @if (editingAppointmentId()) {
@@ -322,7 +334,11 @@
 
         <div class="form-group">
           <label>Report Date</label>
-          <input type="date" formControlName="reportDate">
+          <input type="date" formControlName="reportDate"
+            [class.is-invalid]="reportForm.controls.reportDate.invalid && reportForm.controls.reportDate.touched">
+          @if (reportForm.controls.reportDate.invalid && reportForm.controls.reportDate.touched) {
+            <small class="field-error">Report date is required.</small>
+          }
         </div>
 
         <div class="form-group span-2">
@@ -331,7 +347,7 @@
         </div>
 
         <div class="form-actions span-2">
-          <button type="submit" [disabled]="reportSaving()">
+          <button type="submit" [disabled]="reportForm.invalid || reportSaving()">
             {{ reportSaving() ? 'Saving...' : (editingReportId() ? 'Update Report' : 'Upload Report') }}
           </button>
           @if (editingReportId()) {

@@ -11,8 +11,11 @@ import { AiAssistant } from './features/ai-assistant/ai-assistant';
 import { Login } from './features/auth/login';
 import { Register } from './features/auth/register';
 import { authGuard } from './core/auth.guard';
+import { adminGuard } from './core/admin.guard';
 import { PrivacyPolicy } from './features/legal/privacy-policy';
 import { Terms } from './features/legal/terms';
+import { Contact } from './features/contact/contact';
+import { Admin } from './features/admin/admin';
 
 export const routes: Routes = [
   { path: 'login', component: Login },
@@ -30,6 +33,8 @@ export const routes: Routes = [
       { path: 'documents', component: Documents },
       { path: 'health', component: Health },
       { path: 'ai-assistant', component: AiAssistant },
+      { path: 'contact', component: Contact },
+      { path: 'admin', component: Admin, canActivate: [adminGuard] },
       { path: 'settings', component: Settings },
       { path: 'privacy-policy', component: PrivacyPolicy },
       { path: 'terms', component: Terms }

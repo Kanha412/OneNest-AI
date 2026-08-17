@@ -368,12 +368,21 @@ export class AiAssistant implements OnInit, AfterViewChecked {
       });
   }
 
-  archiveConversation(): void {
+  async archiveConversation(): Promise<void> {
     const selected = this.selectedConversationId();
     if (!selected) {
       this.toastService.error('Select a conversation first');
       return;
     }
+
+    const confirmed = await this.confirmService.confirm({
+      title: 'Archive Conversation',
+      message: 'Are you sure you want to archive this conversation? You can restore it later from the Archived filter.',
+      confirmText: 'Archive',
+      cancelText: 'Cancel'
+    });
+
+    if (!confirmed) return;
 
     this.aiService.archiveConversation(selected)
       .subscribe({

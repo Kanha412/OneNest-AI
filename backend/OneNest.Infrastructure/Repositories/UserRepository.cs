@@ -20,6 +20,13 @@ public class UserRepository : IUserRepository
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
+    public async Task<List<User>> GetAllAsync()
+    {
+        return await _dbContext.Users
+            .OrderBy(x => x.FullName)
+            .ToListAsync();
+    }
+
     public async Task<User?> GetByEmailAsync(string email)
     {
         return await _dbContext.Users

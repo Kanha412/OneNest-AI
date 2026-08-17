@@ -5,6 +5,10 @@
 
   @if (isLoading()) {
     <app-spinner message="Loading your dashboard..." />
+  } @else if (hasLoadError()) {
+    <div class="empty" style="text-align: center; padding: 3rem 1rem;">
+      <p>⚠️ Failed to load some dashboard data. Please refresh the page and try again.</p>
+    </div>
   } @else {
 
   <div class="stats-grid">
