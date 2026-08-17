@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using OneNest.Infrastructure.AI;
 using OneNest.Infrastructure.AI.WorkspaceTools;
 using OneNest.Infrastructure.Data;
+using OneNest.Infrastructure.Documents;
 using OneNest.Application.Interfaces.AI;
 using OneNest.Application.Interfaces.Repositories;
 using OneNest.Application.Interfaces.Security;
@@ -34,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IExpenseRepository, ExpenseRepository>();
         services.AddScoped<IExpenseService, ExpenseService>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
+        services.AddScoped<IDocumentTextExtractor, DocumentTextExtractor>();
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddSingleton<IFileStorageService, FileStorageService>();
 

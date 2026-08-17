@@ -141,11 +141,38 @@
             <p>{{ doc.description }}</p>
           }
 
+          @if (doc.aiSummary && viewSummaryId() === doc.id) {
+            <div class="ai-summary">
+              <span class="ai-summary-label">🤖 AI Summary</span>
+              <p>{{ doc.aiSummary }}</p>
+            </div>
+          }
+
           <div class="actions">
 
             <button type="button" (click)="preview(doc)">Preview</button>
             <button type="button" (click)="download(doc)">Download</button>
             <button type="button" (click)="editDocument(doc)">Edit</button>
+
+            @if (doc.isTextExtracted) {
+              @if (doc.aiSummary) {
+                <button
+                  type="button"
+                  class="secondary"
+                  (click)="toggleSummary(doc.id)">
+                  {{ viewSummaryId() === doc.id ? 'Hide Summary' : '🤖 Summary' }}
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="secondary"
+                  [disabled]="summarizingId() === doc.id"
+                  (click)="summarize(doc)">
+                  {{ summarizingId() === doc.id ? 'Summarizing…' : '🤖 Summarize' }}
+                </button>
+              }
+            }
+
             <button type="button" class="danger" (click)="deleteDocument(doc.id)">Delete</button>
 
           </div>

@@ -30,6 +30,10 @@ export interface DocumentItem {
   fileSize: number;
   category: DocumentCategory;
   description: string;
+  // Phase 6 — AI Document Intelligence
+  isTextExtracted: boolean;
+  aiSummary: string | null;
+  aiSummarizedAt: string | null;
   createdAt: string;
   updatedAt: string | null;
 }

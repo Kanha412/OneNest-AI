@@ -22,6 +22,17 @@ public class Document
 
     public string Description { get; set; } = string.Empty;
 
+    // Phase 6 — AI Document Intelligence
+    public string? ExtractedText { get; set; }
+
+    public bool IsTextExtracted { get; set; }
+
+    public DateTime? TextExtractedAt { get; set; }
+
+    public string? AISummary { get; set; }
+
+    public DateTime? AISummarizedAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAt { get; set; }

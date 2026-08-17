@@ -18,6 +18,13 @@ public class DocumentResponse
 
     public string Description { get; set; } = string.Empty;
 
+    // Phase 6 — AI Document Intelligence
+    public bool IsTextExtracted { get; set; }
+
+    public string? AISummary { get; set; }
+
+    public DateTime? AISummarizedAt { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

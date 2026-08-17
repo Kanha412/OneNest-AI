@@ -88,4 +88,14 @@ export class DocumentsService {
       responseType: 'blob'
     });
   }
+
+  // Phase 6 — AI Document Intelligence
+
+  getExtractedText(id: string): Observable<{ text: string }> {
+    return this.http.get<{ text: string }>(`${this.apiUrl}/${id}/text`);
+  }
+
+  summarize(id: string): Observable<DocumentItem> {
+    return this.http.post<DocumentItem>(`${this.apiUrl}/${id}/summarize`, {});
+  }
 }

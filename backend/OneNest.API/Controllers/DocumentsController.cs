@@ -156,4 +156,35 @@ public class DocumentsController : ControllerBase
         var deletedCount = await _documentService.DeleteAllAsync();
         return Ok(new { deletedCount });
     }
+
+    // Phase 6 — AI Document Intelligence
+
+    [HttpGet("{id:guid}/text")]
+    public async Task<IActionResult> GetExtractedText(Guid id)
+    {
+        var text = await _documentService.GetExtractedTextAsync(id);
+
+        if (text is null)
+            return NotFound(new { message = "No extracted text available for this document." });
+
+        return Ok(new { text });
+    }
+
+    [HttpPost("{id:guid}/summarize")]
+    public async Task<ActionResult<DocumentResponse>> Summarize(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var document = await _documentService.SummarizeAsync(id, cancellationToken);
+
+            if (document is null)
+                return NotFound();
+
+            return Ok(document);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

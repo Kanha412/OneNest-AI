@@ -1,5 +1,7 @@
 using System.IO.Compression;
+using OneNest.Application.DTOs.AI;
 using OneNest.Application.DTOs.Documents;
+using OneNest.Application.Interfaces.AI;
 using OneNest.Application.Interfaces.Repositories;
 using OneNest.Application.Interfaces.Security;
 using OneNest.Application.Interfaces.Services;
@@ -27,17 +29,23 @@ public class DocumentService : IDocumentService
     private readonly IMedicalReportRepository _medicalReportRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IDocumentTextExtractor _textExtractor;
+    private readonly IAIProvider _aiProvider;
 
     public DocumentService(
         IDocumentRepository documentRepository,
         IMedicalReportRepository medicalReportRepository,
         IFileStorageService fileStorageService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IDocumentTextExtractor textExtractor,
+        IAIProvider aiProvider)
     {
         _documentRepository = documentRepository;
         _medicalReportRepository = medicalReportRepository;
         _fileStorageService = fileStorageService;
         _currentUserService = currentUserService;
+        _textExtractor = textExtractor;
+        _aiProvider = aiProvider;
     }
 
     public async Task<List<DocumentResponse>> GetAllAsync(string? search, DocumentCategory? category)
@@ -114,6 +122,29 @@ public class DocumentService : IDocumentService
 
         await _fileStorageService.SaveAsync(userId, storedFileName, input.Content);
 
+        // Phase 6 — extract text from the saved file (best-effort, never blocks upload)
+        string? extractedText = null;
+        bool isTextExtracted = false;
+        DateTime? textExtractedAt = null;
+
+        if (_textExtractor.CanExtract(extension))
+        {
+            try
+            {
+                await using var readStream = await _fileStorageService.OpenReadAsync(userId, storedFileName);
+                if (readStream is not null)
+                {
+                    extractedText = await _textExtractor.ExtractAsync(readStream, extension);
+                    isTextExtracted = true;
+                    textExtractedAt = DateTime.UtcNow;
+                }
+            }
+            catch
+            {
+                // Extraction is best-effort — upload still succeeds on extractor failure
+            }
+        }
+
         var document = new Document
         {
             Id = Guid.NewGuid(),
@@ -127,6 +158,9 @@ public class DocumentService : IDocumentService
             FileSize = input.FileSize,
             Category = input.Metadata.Category,
             Description = input.Metadata.Description,
+            ExtractedText = extractedText,
+            IsTextExtracted = isTextExtracted,
+            TextExtractedAt = textExtractedAt,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -301,6 +335,51 @@ public class DocumentService : IDocumentService
         };
     }
 
+    // ── Phase 6 — AI Document Intelligence ────────────────────────────────
+
+    public async Task<string?> GetExtractedTextAsync(Guid id)
+    {
+        var document = await _documentRepository.GetByIdAsync(id, _currentUserService.UserId);
+        return document?.ExtractedText;
+    }
+
+    public async Task<DocumentResponse?> SummarizeAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var document = await _documentRepository.GetByIdAsync(id, _currentUserService.UserId);
+
+        if (document is null)
+            return null;
+
+        if (string.IsNullOrWhiteSpace(document.ExtractedText))
+            throw new InvalidOperationException("No extracted text is available for this document. Text extraction may not be supported for its file type.");
+
+        var systemPrompt =
+            "You are a document summarization assistant. " +
+            "Produce a concise summary (3-5 sentences) of the document text provided. " +
+            "Focus on the key points. Respond with the summary only — no preamble.";
+
+        var userMessage = new ConversationMessage
+        {
+            Role = "user",
+            Content = $"Document title: {document.Title}\n\nDocument text:\n{document.ExtractedText[..Math.Min(document.ExtractedText.Length, 8000)]}"
+        };
+
+        var aiSummary = await _aiProvider.GenerateResponseAsync(
+            systemPrompt,
+            new List<ConversationMessage> { userMessage },
+            cancellationToken);
+
+        document.AISummary = aiSummary?.Trim();
+        document.AISummarizedAt = DateTime.UtcNow;
+        document.UpdatedAt = DateTime.UtcNow;
+
+        await _documentRepository.UpdateAsync(document);
+
+        return MapToResponse(document);
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+
     private static DocumentResponse MapToResponse(Document document)
     {
         return new DocumentResponse
@@ -312,6 +391,9 @@ public class DocumentService : IDocumentService
             FileSize = document.FileSize,
             Category = document.Category,
             Description = document.Description,
+            IsTextExtracted = document.IsTextExtracted,
+            AISummary = document.AISummary,
+            AISummarizedAt = document.AISummarizedAt,
             CreatedAt = document.CreatedAt,
             UpdatedAt = document.UpdatedAt
         };

@@ -217,7 +217,8 @@ public class AIConversationService : IAIConversationService
             {
                 UserPrompt = messageText,
                 History = history,
-                UtcNow = now
+                UtcNow = now,
+                ContextDepth = contextDepth
             },
             cancellationToken);
 

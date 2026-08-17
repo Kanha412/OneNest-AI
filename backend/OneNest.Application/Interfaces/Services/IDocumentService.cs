@@ -24,4 +24,9 @@ public interface IDocumentService
     Task<List<DocumentResponse>> GetRecentAsync(int count);
 
     Task<DocumentSummaryResponse> GetSummaryAsync();
+
+    // Phase 6 — AI Document Intelligence
+    Task<string?> GetExtractedTextAsync(Guid id);
+
+    Task<DocumentResponse?> SummarizeAsync(Guid id, CancellationToken cancellationToken = default);
 }

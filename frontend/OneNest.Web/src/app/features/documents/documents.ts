@@ -82,6 +82,10 @@ export class Documents implements OnInit {
   readonly previewSupported = signal(false);
   readonly showPreview = signal(false);
 
+  // Phase 6 — AI Document Intelligence
+  readonly summarizingId = signal<string | null>(null);
+  readonly viewSummaryId = signal<string | null>(null);
+
   readonly documentForm = this.fb.group({
     title: ['', Validators.required],
     category: [DocumentCategory.Other],
@@ -342,6 +346,34 @@ export class Documents implements OnInit {
 
   isTextPreview(): boolean {
     return this.previewType().startsWith('text/');
+  }
+
+  // Phase 6 — AI Document Intelligence
+
+  summarize(doc: DocumentItem): void {
+    if (this.summarizingId()) return;
+
+    this.summarizingId.set(doc.id);
+
+    this.service.summarize(doc.id)
+      .pipe(finalize(() => this.summarizingId.set(null)))
+      .subscribe({
+        next: updated => {
+          this.documents.update(docs =>
+            docs.map(d => d.id === updated.id ? updated : d)
+          );
+          this.viewSummaryId.set(updated.id);
+          this.toastService.success('AI summary generated');
+        },
+        error: err => {
+          const msg = err?.error?.message ?? 'Failed to generate AI summary';
+          this.toastService.error(msg);
+        }
+      });
+  }
+
+  toggleSummary(id: string): void {
+    this.viewSummaryId.set(this.viewSummaryId() === id ? null : id);
   }
 
   fileIcon(doc: DocumentItem): string {

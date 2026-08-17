@@ -5,6 +5,13 @@ public class WorkspaceToolExecutionContext
     public string UserPrompt { get; set; } = string.Empty;
     public IReadOnlyList<ConversationMessage> History { get; set; } = Array.Empty<ConversationMessage>();
     public DateTime UtcNow { get; set; }
+
+    /// <summary>
+    /// Depth of workspace context to include in AI responses.
+    /// Values: "low" | "medium" | "high". Sourced from UserSettings.
+    /// Phase 6 — AI Document Intelligence.
+    /// </summary>
+    public string ContextDepth { get; set; } = "medium";
 }
 
 public class WorkspaceToolResult
