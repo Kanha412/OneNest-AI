@@ -261,6 +261,34 @@ sequenceDiagram
   - `lastRecordUpdate`
   - `medicineDistribution`, `appointmentTimeline`, `recentReports`, `upcomingAppointmentsList`
 
+## Semantic Search DTOs
+
+### `SemanticSearchRequest`
+
+| Field | Type | Description |
+|---|---|---|
+| `query` | string | Natural-language query to embed and compare against the index |
+| `topK` | int | Max results to return (1–20, default 5) |
+| `sourceType` | int? | Optional filter: `0` = Note, `1` = Document. Omit to search all types |
+
+### `SemanticSearchResult`
+
+| Field | Type | Description |
+|---|---|---|
+| `sourceId` | guid | PK of the source entity (Note.Id or Document.Id) |
+| `sourceType` | int | `0` = Note, `1` = Document |
+| `title` | string | Human-readable label of the matched item |
+| `score` | double | Cosine similarity ∈ [0, 1]; higher = more relevant |
+
+### `BackfillResult`
+
+| Field | Type | Description |
+|---|---|---|
+| `notesIndexed` | int | Notes successfully embedded during backfill |
+| `documentsIndexed` | int | Documents successfully embedded during backfill |
+| `skipped` | int | Items skipped (no extractable text) |
+| `errors` | int | Items that failed to index |
+
 ## Settings DTOs
 
 ### `SettingsResponse`
@@ -431,6 +459,31 @@ https://localhost:<api-port>
 | POST | `/api/medicalreports` (multipart/form-data) | `200 MedicalReportResponse` | `400` |
 | PUT | `/api/medicalreports/{id}` | `200 MedicalReportResponse` | `404` |
 | DELETE | `/api/medicalreports/{id}` | `204` | `404` |
+
+## Semantic Search Endpoints
+
+| Method | Route | Auth | Description | Success | Other |
+|---|---|---|---|---|---|
+| POST | `/api/semantic-search` | Yes | Run natural-language similarity search | `200 SemanticSearchResult[]` | `400` (empty query) |
+| POST | `/api/semantic-search/backfill` | Yes | Re-index all notes and documents for the authenticated user | `200 BackfillResult` | - |
+
+**Search example request:**
+```json
+{ "query": "monthly savings and expenses", "topK": 5 }
+```
+
+**Search example response:**
+```json
+[
+  { "sourceId": "...", "sourceType": 0, "title": "Monthly Budget Plan", "score": 0.682 },
+  { "sourceId": "...", "sourceType": 1, "title": "Q1 Finance Report.pdf", "score": 0.601 }
+]
+```
+
+**Notes:**
+- Search is scoped to the authenticated user — results never cross user boundaries.
+- Indexing is idempotent; calling backfill multiple times is safe.
+- New notes and documents are indexed automatically on create/update; no manual trigger needed.
 
 ## Settings Endpoints
 

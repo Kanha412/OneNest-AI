@@ -1,14 +1,39 @@
 .page {
-  max-width: 800px;
+  max-width: 900px;
 }
 
-.page h1 {
-  margin-top: 0;
-  color: #111827;
+/* ── Dashboard greeting header ── */
+.dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
 }
 
-.page p {
-  color: #4b5563;
+.dash-header h1 {
+  margin: 0;
+  font-size: 1.9rem;
+  color: var(--color-text);
+}
+
+.dash-greeting {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  text-align: right;
+}
+
+.greeting-hi {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.greeting-date {
+  font-size: 13px;
+  color: var(--color-text-muted);
 }
 
 .stats-grid {

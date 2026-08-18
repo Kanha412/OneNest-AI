@@ -1,7 +1,12 @@
 <section class="page">
-  <h1>🏡 Dashboard</h1>
 
-  <p>Welcome to OneNest AI — your personal life hub.</p>
+  <div class="dash-header">
+    <h1>Dashboard</h1>
+    <div class="dash-greeting">
+      <span class="greeting-hi">{{ greeting }}, {{ firstName() }} 👋</span>
+      <span class="greeting-date">{{ todayLabel }}</span>
+    </div>
+  </div>
 
   @if (isLoading()) {
     <app-spinner message="Loading your dashboard..." />

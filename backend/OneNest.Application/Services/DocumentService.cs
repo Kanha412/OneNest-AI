@@ -31,6 +31,7 @@ public class DocumentService : IDocumentService
     private readonly ICurrentUserService _currentUserService;
     private readonly IDocumentTextExtractor _textExtractor;
     private readonly IAIProvider _aiProvider;
+    private readonly ISemanticIndexService _semanticIndexService;
 
     public DocumentService(
         IDocumentRepository documentRepository,
@@ -38,7 +39,8 @@ public class DocumentService : IDocumentService
         IFileStorageService fileStorageService,
         ICurrentUserService currentUserService,
         IDocumentTextExtractor textExtractor,
-        IAIProvider aiProvider)
+        IAIProvider aiProvider,
+        ISemanticIndexService semanticIndexService)
     {
         _documentRepository = documentRepository;
         _medicalReportRepository = medicalReportRepository;
@@ -46,6 +48,7 @@ public class DocumentService : IDocumentService
         _currentUserService = currentUserService;
         _textExtractor = textExtractor;
         _aiProvider = aiProvider;
+        _semanticIndexService = semanticIndexService;
     }
 
     public async Task<List<DocumentResponse>> GetAllAsync(string? search, DocumentCategory? category)
@@ -166,6 +169,14 @@ public class DocumentService : IDocumentService
 
         await _documentRepository.AddAsync(document);
 
+        // Phase 8 — best-effort semantic indexing; never blocks upload
+        if (!string.IsNullOrWhiteSpace(extractedText))
+        {
+            await _semanticIndexService.IndexAsync(
+                userId, EmbeddingSourceType.Document, document.Id,
+                document.Title, extractedText);
+        }
+
         return MapToResponse(document);
     }
 
@@ -196,6 +207,9 @@ public class DocumentService : IDocumentService
 
         await _fileStorageService.DeleteAsync(userId, document.StoredFileName);
         await _documentRepository.DeleteAsync(document);
+
+        // Phase 8 — remove embedding entry
+        await _semanticIndexService.DeleteIndexAsync(userId, EmbeddingSourceType.Document, id);
 
         return true;
     }
@@ -293,6 +307,14 @@ public class DocumentService : IDocumentService
         {
             await _fileStorageService.DeleteAsync(userId, report.StoredFileName);
             await _medicalReportRepository.DeleteAsync(report);
+        }
+
+        // Phase 8 — remove all document embedding records for the user.
+        // Medical reports are not indexed, so only Document-type embeddings need cleanup.
+        if (documents.Count > 0)
+        {
+            await _semanticIndexService.DeleteAllBySourceTypeAsync(
+                userId, EmbeddingSourceType.Document);
         }
 
         return documents.Count + reports.Count;

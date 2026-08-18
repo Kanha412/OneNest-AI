@@ -94,6 +94,19 @@ The application combines a modern Angular frontend, ASP.NET Core backend, Postgr
 - Bulk Download (ZIP)
 - Delete All
 - Storage Summary
+- **AI Text Extraction** (PDF, DOCX, TXT auto-extracted on upload)
+- **Semantic Indexing** (chunks auto-embedded for search)
+
+---
+
+## 🔍 Semantic Search
+
+- Natural-language similarity search across all notes and documents
+- Powered by Google Gemini Embedding API (`gemini-embedding-001`, 768-dim vectors)
+- pgvector cosine similarity (`<=>` operator) on PostgreSQL
+- Per-chunk indexing (1 200-char chunks, 240-char overlap)
+- Source-type filter (Notes / Documents)
+- Backfill endpoint to index pre-existing workspace items
 
 ---
 
@@ -117,6 +130,7 @@ The application combines a modern Angular frontend, ASP.NET Core backend, Postgr
 - Tool Orchestration
 - AI Metadata
 - Smart Conversation Management
+- **AI Document Intelligence** (summarize / Q&A over uploaded documents)
 
 ---
 
@@ -179,6 +193,31 @@ Instead, it intelligently determines whether the user's question requires worksp
       Conversation Stored + Metadata
 ```
 
+## 🔍 Semantic Search Architecture
+
+Every time a note or document is created or updated, it is silently chunked and embedded in the background — CRUD operations are never blocked.
+
+```text
+  Note / Document (create / update)
+             │
+             ▼
+      SemanticIndexService           ← best-effort, never throws
+             │
+       TextChunker                   ← 1 200-char chunks, 240-char overlap
+             │
+     GeminiEmbeddingProvider         ← gemini-embedding-001, 768 dims
+             │
+      EmbeddingRepository            ← upsert into EmbeddingRecords (pgvector)
+             │
+      PostgreSQL vector(768)
+
+  Semantic Search query
+             │
+             ▼
+  Embed query → cosine similarity (<=>)
+  → ranked results with Score ∈ [0, 1]
+```
+
 ---
 
 # 🏗 Technology Stack
@@ -208,15 +247,19 @@ Instead, it intelligently determines whether the user's question requires worksp
 ## Database
 
 - PostgreSQL
+- **pgvector** (vector similarity search extension)
+- Supabase (hosted PostgreSQL)
 
 ---
 
 ## AI
 
-- Gemini API
+- Gemini API (`gemini-3.5-flash` for chat, `gemini-embedding-001` for embeddings)
 - Workspace Tool Orchestrator
 - Persistent Conversation Memory
 - AI Context Injection
+- **Semantic Search** (768-dim embeddings, cosine similarity)
+- **AI Document Intelligence** (text extraction from PDF/DOCX/TXT)
 
 ---
 
@@ -362,11 +405,44 @@ Workspace-aware AI
 
 ---
 
-## 🚧 Phase 4 (Current)
+## ✅ Phase 4
+
+Product Polish & UX Hardening
 
 - AI Tool Planner
 - Smarter Context Selection
 - Better Prompt Orchestration
+- Settings, Legal Pages, Security UX
+
+---
+
+## ✅ Phase 5
+
+AI Document Intelligence
+
+- Text extraction from PDF, DOCX, TXT on upload
+- Extracted text stored alongside document metadata
+- AI assistant can reference document content
+
+---
+
+## ✅ Phase 6
+
+Contact Us & Admin Management
+
+- Contact form for user inquiries
+- Admin dashboard for user/contact management
+
+---
+
+## ✅ Phase 7 (Latest)
+
+Semantic Search with pgvector
+
+- Notes and Documents auto-indexed with 768-dim embeddings
+- Natural-language similarity search
+- Per-chunk indexing with overlap
+- Backfill for pre-existing workspace items
 
 ---
 
@@ -375,10 +451,10 @@ Workspace-aware AI
 - Smart AI Memory
 - AI Recommendations
 - Dashboard Insights
-- Semantic Search
-- AI Document Understanding
 - Voice Assistant
 - Mobile Responsive Improvements
+- Pagination & API versioning
+- Automated tests & CI/CD pipeline
 
 ---
 

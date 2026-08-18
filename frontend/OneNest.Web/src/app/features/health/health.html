@@ -260,7 +260,15 @@
             <input type="number" formControlName="weightKg" [placeholder]="weightPlaceholder">
           </div>
           <div class="form-group">
-            <label>BMI</label>
+            <label>
+              BMI
+              <button type="button" class="info-btn" (click)="toggleBmiInfo()" title="BMI Information">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                  <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                </svg>
+              </button>
+            </label>
             <input type="text" [value]="bmiDisplay" readonly class="readonly-field" placeholder="Auto-calculated from height and weight">
           </div>
           <div class="form-group">
@@ -285,6 +293,36 @@
             </button>
           </div>
         </form>
+      }
+
+      <!-- BMI Info Popup -->
+      @if (showBmiInfo()) {
+        <div class="bmi-popup-overlay" (click)="closeBmiInfo()">
+          <div class="bmi-popup" (click)="$event.stopPropagation()">
+            <div class="bmi-popup-header">
+              <h3>BMI Index Ranges</h3>
+              <button type="button" class="close-btn" (click)="closeBmiInfo()">&times;</button>
+            </div>
+            <div class="bmi-popup-content">
+              <div class="bmi-range underweight">
+                <div class="bmi-range-label">Underweight</div>
+                <div class="bmi-range-value">< 18.5</div>
+              </div>
+              <div class="bmi-range normal">
+                <div class="bmi-range-label">Normal</div>
+                <div class="bmi-range-value">18.5 - 24.9</div>
+              </div>
+              <div class="bmi-range overweight">
+                <div class="bmi-range-label">Overweight</div>
+                <div class="bmi-range-value">25 - 29.9</div>
+              </div>
+              <div class="bmi-range obese">
+                <div class="bmi-range-label">Obese</div>
+                <div class="bmi-range-value">≥ 30</div>
+              </div>
+            </div>
+          </div>
+        </div>
       }
     </div>
   }

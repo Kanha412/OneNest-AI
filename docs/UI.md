@@ -223,6 +223,9 @@ Both are integrated in-app pages with return link to settings.
 | `ExpensesService` | `/api/expenses` |
 | `NotesService` | `/api/notes` |
 | `TasksService` | `/api/tasks` |
+| `SemanticSearchService` *(planned)* | `/api/semantic-search` |
+
+> **Note:** Semantic search backend endpoints are fully implemented (Phase 7). A frontend UI surface for semantic search is a planned improvement for a future phase.
 
 ## Planned Improvements
 

@@ -16,19 +16,22 @@ public class AuthService : IAuthService
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly ICurrentUserService _currentUserService;
     private readonly IFileStorageService _fileStorageService;
+    private readonly ISemanticIndexService _semanticIndexService;
 
     public AuthService(
         IUserRepository userRepository,
         IPasswordHasher<User> passwordHasher,
         IJwtTokenGenerator jwtTokenGenerator,
         ICurrentUserService currentUserService,
-        IFileStorageService fileStorageService)
+        IFileStorageService fileStorageService,
+        ISemanticIndexService semanticIndexService)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _jwtTokenGenerator = jwtTokenGenerator;
         _currentUserService = currentUserService;
         _fileStorageService = fileStorageService;
+        _semanticIndexService = semanticIndexService;
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
@@ -107,6 +110,13 @@ public class AuthService : IAuthService
         {
             throw new AuthException("Password is incorrect.");
         }
+
+        // Phase 8 — remove all semantic embedding records before the user row
+        // is deleted.  EmbeddingRecords is not an EF Core DbSet, so it is
+        // invisible to HardDeleteAccountAsync; we must clean it up explicitly.
+        // This runs first so there is never a window where embeddings exist for
+        // a user that no longer exists.
+        await _semanticIndexService.DeleteAllByUserAsync(userId);
 
         await _userRepository.HardDeleteAccountAsync(userId);
         await _fileStorageService.DeleteUserDirectoryAsync(userId);

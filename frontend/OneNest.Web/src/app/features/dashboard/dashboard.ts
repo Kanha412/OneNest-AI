@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of } from 'rxjs';
+import { AuthService } from '../../services/auth.service';
 import { NotesService } from '../../services/notes.service';
 import { TasksService } from '../../services/tasks.service';
 import { ExpensesService } from '../../services/expenses.service';
@@ -29,12 +30,32 @@ import { ChartConfiguration } from 'chart.js';
   styleUrl: './dashboard.css'
 })
 export class Dashboard {
+  private readonly authService = inject(AuthService);
   private readonly notesService = inject(NotesService);
   private readonly tasksService = inject(TasksService);
   private readonly expensesService = inject(ExpensesService);
   private readonly documentsService = inject(DocumentsService);
   private readonly healthHubService = inject(HealthHubService);
   private readonly toastService = inject(ToastService);
+
+  /** First name extracted from the logged-in user's full name. */
+  protected readonly firstName = computed(() => {
+    const name = this.authService.currentUser()?.fullName ?? '';
+    return name.split(' ')[0] || name;
+  });
+
+  /** Time-of-day greeting evaluated once on component creation. */
+  protected readonly greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  })();
+
+  /** Today's date formatted for the header, e.g. "Tue, 18 Aug 2026". */
+  protected readonly todayLabel = new Intl.DateTimeFormat('en-IN', {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+  }).format(new Date());
 
   readonly TransactionType = TransactionType;
   readonly categoryLabels = EXPENSE_CATEGORY_LABELS;

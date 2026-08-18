@@ -6,10 +6,12 @@ This document describes the current database model implemented in `backend/OneNe
 
 ## Stack
 
-- **Database provider:** PostgreSQL
+- **Database provider:** PostgreSQL 17 (hosted on Supabase)
+- **Extensions:** `pgvector` (vector similarity search)
 - **ORM:** Entity Framework Core
 - **DbContext:** `OneNestDbContext`
 - **Migrations folder:** `backend/OneNest.Infrastructure/Migrations`
+- **Raw ADO.NET:** used in `EmbeddingRepository` for `vector(N)` column operations not supported by EF Core's Npgsql provider without the optional pgvector package
 
 ## Schema Overview
 
@@ -27,6 +29,7 @@ This document describes the current database model implemented in `backend/OneNe
 - `MedicalReports`
 - `AIConversations`
 - `AIMessages`
+- `EmbeddingRecords` (Phase 8 — pgvector semantic search)
 
 ## Entity Catalog
 
@@ -37,13 +40,14 @@ This document describes the current database model implemented in `backend/OneNe
 | `Note` | Personal notes | Yes |
 | `TaskItem` | Personal tasks | Yes |
 | `Expense` | Income/expense transactions | Yes |
-| `Document` | Uploaded document metadata | Yes |
+| `Document` | Uploaded document metadata + extracted text | Yes |
 | `Medicine` | Medicine tracking | Yes |
 | `Appointment` | Healthcare appointments | Yes |
 | `MedicalRecord` | Current medical profile | Yes |
 | `MedicalReport` | Uploaded medical report metadata | Yes |
 | `AIConversation` | AI chat conversations | Yes |
 | `AIMessage` | Messages for a conversation | Indirect via conversation |
+| `EmbeddingRecord` | Semantic embedding vector for one chunk of a note or document | Yes (`UserId`) |
 
 ## Core Columns by Entity
 
@@ -123,6 +127,25 @@ These entities store metadata in DB; file binary content is stored via file stor
 - `TokenCount` (nullable)
 - `IsError`
 
+## Semantic Search Entity
+
+### `EmbeddingRecord`
+
+- `Id` (uuid, PK)
+- `UserId` (uuid) — every search is scoped to a single user
+- `SourceType` (int: `0` = Note, `1` = Document)
+- `SourceId` (uuid) — PK of the source entity
+- `Title` (text, nullable) — human-readable label cached for search results
+- `ChunkIndex` (int) — zero-based position of this chunk within the source item
+- `Embedding` (`vector(768)`) — L2-normalised embedding stored via pgvector
+- `CreatedAt`, `UpdatedAt` (nullable)
+
+**Notes:**
+- One source item can produce multiple `EmbeddingRecord` rows (one per chunk).
+- The unique constraint is on `(UserId, SourceType, SourceId, ChunkIndex)` — upserts are used on re-index.
+- The `Embedding` column uses pgvector's `vector(768)` type. EF Core does not manage this column directly; `EmbeddingRepository` uses raw ADO.NET.
+- Cosine similarity search: `1 - ("Embedding" <=> '{vector}'::vector) AS "Score"`
+
 ## Relationships
 
 The explicit EF relationship configured in `OnModelCreating`:
@@ -147,6 +170,7 @@ erDiagram
   USERS ||--o{ MEDICAL_REPORTS : owns
   USERS ||--o{ AI_CONVERSATIONS : owns
   USERS ||--|| USER_SETTINGS : has
+  USERS ||--o{ EMBEDDING_RECORDS : owns
 
   AI_CONVERSATIONS ||--o{ AI_MESSAGES : contains
 ```
@@ -165,6 +189,8 @@ Configured indexes from DbContext/migrations:
 | `AIConversations` | `LastMessageAt` | No |
 | `AIMessages` | `ConversationId` | No |
 | `AIMessages` | `CreatedAt` | No |
+| `EmbeddingRecords` | `(UserId, SourceType, SourceId, ChunkIndex)` | Yes (upsert key) |
+| `EmbeddingRecords` | `(UserId, SourceType, SourceId)` | No (fast delete by source) |
 
 ## Migration Timeline
 
@@ -192,6 +218,15 @@ Configured indexes from DbContext/migrations:
 ## `20260805111607_AddUserLastLoginAt`
 
 - Added nullable `LastLoginAt` to `Users`
+
+## `20260817153225_AddSemanticEmbeddings`
+
+- Enabled `pgvector` extension: `CREATE EXTENSION IF NOT EXISTS vector`
+- Created `EmbeddingRecords` table with `Embedding vector(768)` column
+- Added unique index on `(UserId, SourceType, SourceId, ChunkIndex)` for upsert
+- Added composite index on `(UserId, SourceType, SourceId)` for source-level deletes
+- Added `ExtractedText` column to `Documents` table for storing AI-extracted text content
+- **Note:** `vector(N)` DDL is applied via raw SQL (`migrationBuilder.Sql()`) since EF Core's Npgsql provider does not generate `vector` column types without the optional pgvector NuGet package
 
 ## Data Ownership and Isolation
 

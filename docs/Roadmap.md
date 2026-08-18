@@ -42,9 +42,7 @@ OneNest AI is currently a personal productivity + life-management platform that 
 - User settings model (`UserSettings`) + settings UI integration
 - Last login tracking added to user profile
 
-## Phase 4 — Product Polish & UX Hardening (Current Phase)
-
-Current repository state shows active product refinement focused on UX consistency and production readiness:
+## Phase 4 — Product Polish & UX Hardening (Completed)
 
 - AI preferences simplified in UI to context depth + response style
 - Storage experience aligned to combined documents + health reports usage
@@ -52,6 +50,31 @@ Current repository state shows active product refinement focused on UX consisten
 - Dashboard empty-state and card alignment improvements
 - AI assistant empty/composer behavior improved for no-active-conversation cases
 - Privacy policy and terms pages added and wired
+
+## Phase 5 — AI Document Intelligence (Completed)
+
+- Text extraction pipeline on document upload (PDF, DOCX, TXT)
+- `ExtractedText` column added to `Documents` table
+- AI assistant can reference document content via workspace tool
+- `IDocumentTextExtractor` interface with format-specific implementations
+
+## Phase 6 — Contact Us & Admin Management (Completed)
+
+- Contact form for user inquiries stored in database
+- Admin dashboard endpoint for listing and managing contacts
+- Admin user management (list users, view stats)
+
+## Phase 7 — Semantic Search with pgvector (Completed)
+
+- `pgvector` extension enabled on PostgreSQL
+- `EmbeddingRecords` table with `vector(768)` column
+- `GeminiEmbeddingProvider` using `gemini-embedding-001` (768-dim vectors)
+- `TextChunker` with configurable chunk size (1 200 chars) and overlap (240 chars)
+- `SemanticIndexService` — best-effort background indexing on every note/document CRUD
+- `SemanticSearchService` — cosine similarity search scoped to authenticated user
+- `BackfillService` — re-index pre-existing workspace items
+- `SemanticSearchController` — `POST /api/semantic-search` and `POST /api/semantic-search/backfill`
+- Optional `LocalEmbeddingProvider` (all-MiniLM-L6-v2 ONNX, 384-dim, offline)
 
 ## Milestone View
 
@@ -63,24 +86,27 @@ Current repository state shows active product refinement focused on UX consisten
 | Last login tracking | Done | migration `AddUserLastLoginAt`, settings account payload |
 | Unified storage controls | Done | settings + documents/health aggregation in frontend and backend endpoints |
 | Legal pages integrated | Done | `privacy-policy` and `terms` routes/pages |
+| AI document text extraction | Done | `DocumentTextExtractor`, `ExtractedText` on `Documents` |
+| Contact + admin management | Done | `ContactRepository`, `AdminService`, admin endpoints |
+| Semantic search (pgvector) | Done | migration `AddSemanticEmbeddings`, `EmbeddingRecords`, search endpoints |
 
 ## Upcoming Phases (Planned Improvements)
 
-## Phase 5 — API and Platform Maturity
+## Phase 8 — API and Platform Maturity
 
 - Standardize API error envelopes and response conventions
 - Add pagination contracts for list-heavy endpoints
 - Add stronger DB referential constraints and index tuning
 - Add centralized exception middleware + structured observability
 
-## Phase 6 — Quality and Release Engineering
+## Phase 9 — Quality and Release Engineering
 
 - Add comprehensive automated tests (backend + frontend)
 - Add CI pipeline for build/test/lint/doc checks
 - Add environment templates and deployment documentation
 - Add release versioning and changelog process
 
-## Phase 7 — UX, Accessibility, and Mobile Readiness
+## Phase 10 — UX, Accessibility, and Mobile Readiness
 
 - Responsive navigation for smaller screens
 - Accessibility audit/remediation

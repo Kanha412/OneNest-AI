@@ -15,7 +15,8 @@
 }
 
 .filters input {
-  flex: 1 1 200px;
+  flex: 1 1 180px;
+  max-width: 300px;
 }
 
 .filters select {

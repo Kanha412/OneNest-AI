@@ -60,9 +60,11 @@ OneNest AI is an AI-powered personal workspace that combines productivity, docum
 
 ### Documents
 
-- File Upload
+- File Upload (AI text extraction on upload for PDF/DOCX/TXT)
 - Document Library
 - Search Documents
+- Preview & Download
+- Bulk Download (ZIP)
 
 ### Health
 
@@ -216,19 +218,21 @@ Current major features:
 - Expense Tracking
 - Notes
 - Tasks
-- Documents
+- Documents (with AI text extraction)
 - Modern Settings
+- **Semantic Search backend** (pgvector, 768-dim Gemini embeddings)
 
 ---
 
 ## Future Enhancements
 
+- Semantic Search UI surface
 - Dark Mode
 - AI Memory Improvements
 - Smart Notifications
-- OCR for Documents
 - Voice Assistant
 - Mobile Responsive Enhancements
+- Automated tests + CI/CD pipeline
 
 ---
 

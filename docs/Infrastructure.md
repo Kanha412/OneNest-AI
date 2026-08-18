@@ -56,10 +56,24 @@ flowchart LR
 - JWT/security helpers (`IJwtTokenGenerator`, `ICurrentUserService`)
 - `IPasswordHasher<User>`
 - AI modules:
-  - `IAIProvider` -> `GeminiProvider` (HttpClient, 30s timeout)
+  - `IAIProvider` -> `GeminiProvider` (HttpClient with `HttpClientHandler`, 30s timeout)
   - `IAIWorkspacePlanner`
   - `IAIWorkspaceOrchestrator`
   - workspace tools (`tasks`, `expenses`, `notes`, `documents`, `health`)
+- Phase 8 — Semantic Search modules:
+  - `IEmbeddingProvider` -> `GeminiEmbeddingProvider` (singleton, owns its own `HttpClient`)
+  - `ITextChunker` -> `TextChunker` (singleton, stateless)
+  - `IEmbeddingRepository` -> `EmbeddingRepository`
+  - `ISemanticIndexService` -> `SemanticIndexService`
+  - `ISemanticSearchService` -> `SemanticSearchService`
+  - `IBackfillService` -> `BackfillService`
+
+**Embedding provider selection** (`Embeddings:Provider` config key):
+
+| Value | Provider | Dimensions | Notes |
+|---|---|---|---|
+| `Gemini` (default) | `GeminiEmbeddingProvider` | 768 | Hosted, requires `AI:ApiKey` |
+| `Local` | `LocalEmbeddingProvider` | 384 | Offline ONNX (all-MiniLM-L6-v2), no API key |
 
 ## API Host Pipeline
 
@@ -116,7 +130,7 @@ This keeps API transport logic thin and business rules concentrated in services.
 
 ## AI Integration Design
 
-## Provider
+## Chat Provider
 
 - Active provider: **Gemini** (`GeminiProvider`)
 - Endpoint: Google Generative Language API
@@ -126,6 +140,43 @@ This keeps API transport logic thin and business rules concentrated in services.
 - Error mapping:
   - Auth failure -> invalid operation message
   - Rate-limit -> invalid operation message consumed by API -> 429
+
+## Embedding Provider (Phase 8)
+
+`GeminiEmbeddingProvider` owns its own `HttpClient` (static singleton pattern) to avoid the DI typed-factory/singleton mismatch.
+
+- **Endpoint:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent`
+- **Model:** `gemini-embedding-001`
+- **Output dimensions:** 768 (configured via `Embeddings:Dimension`)
+- **SSL handling in Development:** `HttpClientHandler.DangerousAcceptAnyServerCertificateValidator` to handle corporate SSL-inspection proxies (Zscaler). Production uses default `HttpClientHandler` with full certificate validation.
+- **On any failure:** returns `null` — CRUD operations are never blocked by embedding errors.
+
+## Text Chunker (Phase 8)
+
+`TextChunker` splits extracted text into overlapping chunks for embedding:
+
+| Config key | Default | Description |
+|---|---|---|
+| `TextChunker:ChunkSizeChars` | 1200 | Max characters per chunk |
+| `TextChunker:ChunkOverlapChars` | 240 | Overlap between consecutive chunks |
+
+## Semantic Indexing Design (Phase 8)
+
+```mermaid
+flowchart TD
+  CRUD[Note / Document CRUD] --> SIS[SemanticIndexService.IndexAsync]
+  SIS -->|best-effort, silent on error| TC[TextChunker]
+  TC --> EP[IEmbeddingProvider.EmbedAsync]
+  EP --> ER[EmbeddingRepository.UpsertAsync]
+  ER --> PG[(PostgreSQL pgvector)]
+
+  DEL[Note / Document Delete] --> SIS2[SemanticIndexService.DeleteIndexAsync]
+  SIS2 --> ER2[EmbeddingRepository.DeleteBySourceAsync]
+```
+
+- `SemanticIndexService` wraps all exceptions in a bare `catch {}` — indexing failures are logged at Warning level but never propagate to the caller. This is intentional: CRUD must never fail due to embedding unavailability.
+- `BackfillService` re-indexes all notes and documents for a given user. Safe to call multiple times (upsert semantics).
+- `EmbeddingRepository` uses raw ADO.NET (`Database.GetDbConnection()`) for all pgvector operations since EF Core cannot generate `vector(N)` column DDL or map float arrays to it without additional packages.
 
 ## Conversation service
 

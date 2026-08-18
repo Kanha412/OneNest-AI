@@ -81,13 +81,13 @@
     <div class="actions">
 
       <button
-    type="button"
-    class="pin-btn"
-    (click)="togglePin(note.id)">
-
-    {{ note.isPinned ? '📌' : '📍' }}
-
-</button>
+        type="button"
+        class="pin-btn"
+        [class.pinned]="note.isPinned"
+        [title]="note.isPinned ? 'Unpin note' : 'Pin note'"
+        (click)="togglePin(note.id)">
+        📌
+      </button>
   <button
     type="button"
     class="edit-btn"

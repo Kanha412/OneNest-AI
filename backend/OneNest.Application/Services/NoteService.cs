@@ -3,6 +3,7 @@ using OneNest.Application.Interfaces.Repositories;
 using OneNest.Application.Interfaces.Security;
 using OneNest.Application.Interfaces.Services;
 using OneNest.Domain.Entities;
+using OneNest.Domain.Enums;
 
 namespace OneNest.Application.Services;
 
@@ -10,11 +11,16 @@ public class NoteService : INoteService
 {
     private readonly INoteRepository _noteRepository;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ISemanticIndexService _semanticIndexService;
 
-    public NoteService(INoteRepository noteRepository, ICurrentUserService currentUserService)
+    public NoteService(
+        INoteRepository noteRepository,
+        ICurrentUserService currentUserService,
+        ISemanticIndexService semanticIndexService)
     {
         _noteRepository = noteRepository;
         _currentUserService = currentUserService;
+        _semanticIndexService = semanticIndexService;
     }
 
     public async Task<List<NoteResponse>> GetAllAsync()
@@ -46,6 +52,11 @@ public class NoteService : INoteService
 
     await _noteRepository.AddAsync(note);
 
+    // Phase 8 — best-effort semantic indexing; never blocks note creation
+    await _semanticIndexService.IndexAsync(
+        note.UserId, EmbeddingSourceType.Note, note.Id,
+        note.Title, note.Content ?? string.Empty);
+
     return new NoteResponse
 {
     Id = note.Id,
@@ -60,12 +71,16 @@ public class NoteService : INoteService
 
     public async Task DeleteAsync(Guid id)
 {
-    var note = await _noteRepository.GetByIdAsync(id, _currentUserService.UserId);
+    var userId = _currentUserService.UserId;
+    var note = await _noteRepository.GetByIdAsync(id, userId);
 
     if (note is null)
         return;
 
     await _noteRepository.DeleteAsync(note);
+
+    // Phase 8 — remove embedding entry
+    await _semanticIndexService.DeleteIndexAsync(userId, EmbeddingSourceType.Note, id);
 }
 
 public async Task<NoteResponse?> UpdateAsync(Guid id, UpdateNoteRequest request)
@@ -80,6 +95,11 @@ public async Task<NoteResponse?> UpdateAsync(Guid id, UpdateNoteRequest request)
     note.UpdatedAt = DateTime.UtcNow;
 
     await _noteRepository.UpdateAsync(note);
+
+    // Phase 8 — re-index with updated content
+    await _semanticIndexService.IndexAsync(
+        note.UserId, EmbeddingSourceType.Note, note.Id,
+        note.Title, note.Content ?? string.Empty);
 
     return new NoteResponse
     {

@@ -131,12 +131,13 @@ textarea {
 /* ---------- Search ---------- */
 .search-container {
   margin: var(--space-5) 0;
+  max-width: 460px;
 }
 
 .search-container input {
   width: 100%;
-  padding: 12px;
-  font-size: 16px;
+  padding: 10px 14px;
+  font-size: 15px;
 }
 
 /* ---------- Buttons ---------- */
@@ -155,7 +156,7 @@ button[type='submit'] {
   font-weight: 600;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, transform 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 
 .btn:hover,
