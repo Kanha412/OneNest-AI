@@ -29,7 +29,7 @@ public class GeminiProvider : IAIProvider
             throw new InvalidOperationException("AI API key is not configured.");
 
         var model = string.IsNullOrWhiteSpace(_options.Model)
-            ? "gemini-3.5-flash"
+            ? "gemini-2.5-flash"
             : _options.Model.Trim();
 
         var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={_options.ApiKey}";
@@ -111,7 +111,7 @@ public class GeminiProvider : IAIProvider
                     continue;
                 }
 
-                throw new InvalidOperationException($"AI request failed ({(int)response.StatusCode}).");
+                throw new InvalidOperationException($"AI request failed ({(int)response.StatusCode}): {responseBody}");
             }
             catch (TaskCanceledException) when (attempt < maxAttempts)
             {
