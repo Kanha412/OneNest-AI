@@ -54,7 +54,8 @@ public class SemanticSearchServiceTests
     private static SemanticSearchService MakeService(
         Mock<IEmbeddingProvider>   embMock,
         Mock<IEmbeddingRepository> repoMock) =>
-        new(embMock.Object, repoMock.Object);
+        new(embMock.Object, repoMock.Object,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<SemanticSearchService>.Instance);
 
     // ── 1. Empty query returns empty list ────────────────────────────────────
 

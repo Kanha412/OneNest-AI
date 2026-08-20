@@ -63,18 +63,20 @@ public static class DependencyInjection
         });
 
         // Phase 8 — configurable embedding provider
-        // Default: Gemini text-embedding-004 (hosted, $0 free tier, 768 dims)
-        // Optional: Local all-MiniLM-L6-v2 ONNX (offline, no API key, 384 dims)
-        // Switch via  Embeddings:Provider = "Gemini" | "Local"  in appsettings.json.
+        // Default: Local all-MiniLM-L6-v2 ONNX (offline, no API key, 384 dims, zero-cost)
+        // Optional: Gemini text-embedding-004 (requires API key, 768 dims)
+        //           → also update Embeddings:Dimension and EmbeddingRecords column to 768
+        // Switch via  Embeddings:Provider = "Local" | "Gemini"  in appsettings.json.
         services.Configure<EmbeddingOptions>(configuration.GetSection("Embeddings"));
 
-        var embeddingProvider = configuration["Embeddings:Provider"] ?? "Gemini";
+        var embeddingProvider = configuration["Embeddings:Provider"] ?? "Local";
         if (embeddingProvider.Equals("Local", StringComparison.OrdinalIgnoreCase))
         {
             services.Configure<LocalEmbeddingOptions>(configuration.GetSection("LocalEmbedding"));
             services.AddHttpClient<LocalEmbeddingProvider>(client =>
             {
-                // Large timeout: ONNX model download (~22 MB) happens once on first use.
+                // Large timeout: ONNX model download (~22 MB, INT8 quantized) happens once on first use.
+                // In production (Docker) the model is bundled in the image — no download occurs.
                 client.Timeout = TimeSpan.FromMinutes(5);
             }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
@@ -84,9 +86,11 @@ public static class DependencyInjection
         }
         else
         {
-            // Default: Gemini text-embedding-004.
+            // Opt-in: Gemini text-embedding-004 (requires Embeddings:Provider=Gemini in config).
             // GeminiEmbeddingProvider owns its HttpClient directly (HttpClientHandler)
             // so the Windows native TLS stack is used on all environments.
+            // IMPORTANT: also update Embeddings:Dimension=768 and EmbeddingRecords vector(768)
+            // when switching to this provider.
             services.AddSingleton<IEmbeddingProvider, GeminiEmbeddingProvider>();
         }
         services.AddScoped<IAIConversationRepository, AIConversationRepository>();
@@ -107,6 +111,10 @@ public static class DependencyInjection
         services.AddScoped<ISemanticIndexService, SemanticIndexService>();
         services.AddScoped<ISemanticSearchService, SemanticSearchService>();
         services.AddScoped<IBackfillService, BackfillService>();
+
+        // Phase 9 — RAG (Retrieval-Augmented Generation)
+        services.Configure<RagOptions>(configuration.GetSection("RAG"));
+        services.AddScoped<IRagService, RagService>();
 
         services.AddScoped<IContactRepository, ContactRepository>();
         services.AddScoped<IContactService, ContactService>();

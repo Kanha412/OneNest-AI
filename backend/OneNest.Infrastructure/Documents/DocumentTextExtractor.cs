@@ -1,6 +1,7 @@
 using System.Text;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using Microsoft.Extensions.Logging;
 using OneNest.Application.Interfaces.Services;
 using UglyToad.PdfPig;
 
@@ -19,6 +20,13 @@ public class DocumentTextExtractor : IDocumentTextExtractor
     {
         ".pdf", ".docx", ".txt", ".csv", ".rtf"
     };
+
+    private readonly ILogger<DocumentTextExtractor> _logger;
+
+    public DocumentTextExtractor(ILogger<DocumentTextExtractor> logger)
+    {
+        _logger = logger;
+    }
 
     public bool CanExtract(string extension) =>
         !string.IsNullOrWhiteSpace(extension) && SupportedExtensions.Contains(extension);
@@ -40,9 +48,15 @@ public class DocumentTextExtractor : IDocumentTextExtractor
                 _ => null
             };
         }
-        catch
+        catch (Exception ex)
         {
             // Extraction is best-effort — never let it crash the upload flow.
+            // Log the real exception so silent failures are diagnosable.
+            _logger.LogWarning(ex,
+                "DocumentTextExtractor: extraction threw for '{Extension}'. " +
+                "Possible causes: image-only PDF, encrypted PDF, unsupported format. " +
+                "Semantic indexing will be skipped for this file.",
+                ext);
             return null;
         }
     }
@@ -67,7 +81,28 @@ public class DocumentTextExtractor : IDocumentTextExtractor
         foreach (var page in pdf.GetPages())
         {
             cancellationToken.ThrowIfCancellationRequested();
-            sb.AppendLine(page.Text);
+
+            // CRITICAL: use GetWords() instead of page.Text.
+            //
+            // page.Text concatenates character glyphs WITHOUT inserting spaces
+            // between words for many PDF layouts (e.g. resumes, multi-column
+            // forms, and any PDF where word spacing is encoded as glyph offsets
+            // rather than explicit space characters).
+            // Result: "KANHAGUPTAKatni,MadhyaPradesh+919407..." — one giant
+            // space-free string.  The BERT WordPiece tokenizer is O(n²) on
+            // long unknown words and hangs for 10+ minutes on such input.
+            //
+            // GetWords() uses PdfPig's built-in word-segmentation algorithm
+            // which analyses glyph positions and bounding boxes to detect word
+            // boundaries correctly — the same approach used by PDF viewers.
+            // Joining with a single space yields naturally-tokenizable text.
+            var pageWords = page.GetWords();
+            var pageText  = string.Join(" ", pageWords.Select(w => w.Text));
+
+            if (!string.IsNullOrWhiteSpace(pageText))
+            {
+                sb.AppendLine(pageText);
+            }
 
             if (sb.Length >= MaxExtractedChars)
                 break;

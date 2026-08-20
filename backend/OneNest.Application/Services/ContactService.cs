@@ -3,6 +3,7 @@ using OneNest.Application.Interfaces.Repositories;
 using OneNest.Application.Interfaces.Security;
 using OneNest.Application.Interfaces.Services;
 using OneNest.Domain.Entities;
+using OneNest.Domain.Enums;
 
 namespace OneNest.Application.Services;
 
@@ -47,6 +48,23 @@ public class ContactService : IContactService
     {
         var messages = await _contactRepository.GetByUserIdAsync(_currentUserService.UserId);
         return messages.Select(MapToResponse).ToList();
+    }
+
+    public async Task<ContactSummaryResponse> GetSummaryAsync()
+    {
+        var messages = await _contactRepository.GetByUserIdAsync(_currentUserService.UserId);
+        return new ContactSummaryResponse
+        {
+            TotalMessages = messages.Count,
+            NewCount      = messages.Count(m => m.Status == ContactStatus.New),
+            ReadCount     = messages.Count(m => m.Status == ContactStatus.Read),
+            ResolvedCount = messages.Count(m => m.Status == ContactStatus.Resolved),
+            RecentMessages = messages
+                .OrderByDescending(m => m.CreatedAt)
+                .Take(3)
+                .Select(MapToResponse)
+                .ToList()
+        };
     }
 
     private static ContactMessageResponse MapToResponse(ContactMessage m) => new()

@@ -4,8 +4,6 @@ public class SettingsResponse
 {
     public AccountSettingsResponse Account { get; set; } = new();
 
-    public AiPreferencesSettingsResponse AiPreferences { get; set; } = new();
-
     public NotificationSettingsResponse Notifications { get; set; } = new();
 
     public DocumentSettingsResponse Documents { get; set; } = new();
@@ -28,19 +26,6 @@ public class AccountSettingsResponse
     public DateTime MemberSince { get; set; }
 
     public DateTime? LastLoginAt { get; set; }
-}
-
-public class AiPreferencesSettingsResponse
-{
-    public bool EnableWorkspaceContext { get; set; }
-
-    public string ContextDepth { get; set; } = "medium";
-
-    public string DefaultConversationMode { get; set; } = "workspace";
-
-    public string ResponseStyle { get; set; } = "balanced";
-
-    public bool EnableSmartSuggestions { get; set; } = true;
 }
 
 public class NotificationSettingsResponse
@@ -96,7 +81,7 @@ public class AboutSettingsResponse
 
     public string BuildVersion { get; set; } = "2026.08";
 
-    public string Developer { get; set; } = "OneNest AI Team";
+    public string Developer { get; set; } = "Kanha Gupta";
 
-    public string Copyright { get; set; } = "© OneNest AI";
+    public string Copyright { get; set; } = "© OneNest";
 }

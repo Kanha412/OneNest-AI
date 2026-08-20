@@ -1,4 +1,6 @@
 using System.IO.Compression;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OneNest.Application.DTOs.AI;
 using OneNest.Application.DTOs.Documents;
 using OneNest.Application.Interfaces.AI;
@@ -32,6 +34,8 @@ public class DocumentService : IDocumentService
     private readonly IDocumentTextExtractor _textExtractor;
     private readonly IAIProvider _aiProvider;
     private readonly ISemanticIndexService _semanticIndexService;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<DocumentService> _logger;
 
     public DocumentService(
         IDocumentRepository documentRepository,
@@ -40,7 +44,9 @@ public class DocumentService : IDocumentService
         ICurrentUserService currentUserService,
         IDocumentTextExtractor textExtractor,
         IAIProvider aiProvider,
-        ISemanticIndexService semanticIndexService)
+        ISemanticIndexService semanticIndexService,
+        IServiceScopeFactory scopeFactory,
+        ILogger<DocumentService> logger)
     {
         _documentRepository = documentRepository;
         _medicalReportRepository = medicalReportRepository;
@@ -49,6 +55,8 @@ public class DocumentService : IDocumentService
         _textExtractor = textExtractor;
         _aiProvider = aiProvider;
         _semanticIndexService = semanticIndexService;
+        _scopeFactory = scopeFactory;
+        _logger = logger;
     }
 
     public async Task<List<DocumentResponse>> GetAllAsync(string? search, DocumentCategory? category)
@@ -138,13 +146,39 @@ public class DocumentService : IDocumentService
                 if (readStream is not null)
                 {
                     extractedText = await _textExtractor.ExtractAsync(readStream, extension);
-                    isTextExtracted = true;
-                    textExtractedAt = DateTime.UtcNow;
+
+                    // Only flag as extracted when we actually got usable text.
+                    // An empty result means the PDF is image-only, or the extractor
+                    // encountered an error — either way semantic indexing cannot run.
+                    isTextExtracted = !string.IsNullOrWhiteSpace(extractedText);
+                    textExtractedAt = isTextExtracted ? DateTime.UtcNow : (DateTime?)null;
+
+                    if (!isTextExtracted)
+                        _logger.LogWarning(
+                            "DocumentService: text extraction returned empty/null for '{FileName}' ({Extension}). " +
+                            "Semantic indexing will be skipped. " +
+                            "If this is a PDF, it may be image-only (no selectable text). " +
+                            "Check DocumentTextExtractor logs above for the root cause.",
+                            input.OriginalFileName, extension);
+                    else
+                        _logger.LogInformation(
+                            "DocumentService: extracted {CharCount} chars from '{FileName}'.",
+                            extractedText!.Length, input.OriginalFileName);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "DocumentService: OpenReadAsync returned null for '{FileName}' (storedName={StoredFileName}). " +
+                        "Skipping text extraction.",
+                        input.OriginalFileName, storedFileName);
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // Extraction is best-effort — upload still succeeds on extractor failure
+                _logger.LogWarning(ex,
+                    "DocumentService: text extraction threw for '{FileName}'. Semantic indexing skipped.",
+                    input.OriginalFileName);
             }
         }
 
@@ -169,12 +203,64 @@ public class DocumentService : IDocumentService
 
         await _documentRepository.AddAsync(document);
 
-        // Phase 8 — best-effort semantic indexing; never blocks upload
+        // Phase 8 — semantic indexing in background; never blocks the upload HTTP response.
+        //
+        // WHY background: ONNX inference over a multi-chunk PDF (e.g. a resume) can take
+        // 5–30 s. Awaiting it inside the request scope causes two problems:
+        //   (a) The upload button shows "Saving…" for the full inference duration.
+        //   (b) If the user navigates away, the browser cancels the HTTP request;
+        //       ASP.NET Core tears down the request scope and disposes the DbContext
+        //       mid-flight, causing the Npgsql UpsertAsync to throw — silently
+        //       swallowed by SemanticIndexService — so the EmbeddingRecord is never
+        //       written even though the Document row was already committed.
+        //
+        // FIX: fire-and-forget on a ThreadPool thread using a *new* DI scope.
+        // The fresh scope owns its own DbContext lifetime that is independent of the
+        // HTTP request, so navigation-away or client disconnects cannot interrupt it.
         if (!string.IsNullOrWhiteSpace(extractedText))
         {
-            await _semanticIndexService.IndexAsync(
-                userId, EmbeddingSourceType.Document, document.Id,
-                document.Title, extractedText);
+            var capturedUserId = userId;
+            var capturedId     = document.Id;
+            var capturedTitle  = document.Title;
+            var capturedText   = extractedText;
+
+            _logger.LogInformation(
+                "DocumentService: starting background semantic indexing for document {DocumentId} ('{Title}', {CharCount} chars).",
+                capturedId, capturedTitle, capturedText.Length);
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await using var scope        = _scopeFactory.CreateAsyncScope();
+                    var             indexService = scope.ServiceProvider
+                                                       .GetRequiredService<ISemanticIndexService>();
+                    await indexService.IndexAsync(
+                        capturedUserId, EmbeddingSourceType.Document,
+                        capturedId, capturedTitle, capturedText);
+
+                    _logger.LogInformation(
+                        "DocumentService: background semantic indexing COMPLETED for document {DocumentId} ('{Title}').",
+                        capturedId, capturedTitle);
+                }
+                catch (Exception ex)
+                {
+                    // Best-effort — the Document row is already committed.
+                    // Run POST /api/semantic-search/backfill to re-index.
+                    _logger.LogError(ex,
+                        "DocumentService: background semantic indexing FAILED for document {DocumentId} ('{Title}'). " +
+                        "Run POST /api/semantic-search/backfill to retry.",
+                        capturedId, capturedTitle);
+                }
+            });
+        }
+        else
+        {
+            _logger.LogWarning(
+                "DocumentService: no extracted text for '{OriginalFileName}' — semantic indexing skipped. " +
+                "IsTextExtracted={IsTextExtracted}. If the file was a PDF, check for image-only content. " +
+                "Run POST /api/semantic-search/backfill after fixing the underlying issue.",
+                input.OriginalFileName, isTextExtracted);
         }
 
         return MapToResponse(document);

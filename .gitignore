@@ -28,6 +28,11 @@
 # Uploaded documents (stored on disk, not in git)
 **/uploads/
 
+# ONNX model binaries — too large for plain git (use Git LFS for production tracking)
+# For local development: model downloads to ~/.onenest/models/all-MiniLM-L6-v2/model.onnx
+# For Docker/Render: model is downloaded at docker build time with SHA256 verification
+**/models/**/*.onnx
+
 # OS
 .DS_Store
 Thumbs.db

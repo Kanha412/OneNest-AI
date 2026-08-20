@@ -82,6 +82,13 @@ public class AIConversationRepository : IAIConversationRepository
         await _dbContext.SaveChangesAsync();
     }
 
+    public async Task DeleteConversationAsync(AIConversation conversation)
+    {
+        // Hard delete — CASCADE on AIMessages FK removes all messages automatically.
+        _dbContext.AIConversations.Remove(conversation);
+        await _dbContext.SaveChangesAsync();
+    }
+
     public async Task AddMessageAsync(AIMessage message)
     {
         _dbContext.AIMessages.Add(message);

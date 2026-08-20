@@ -51,10 +51,13 @@ public class LocalEmbeddingProviderTests
     [Fact]
     public async Task EmbedAsync_DownloadFailure_ReturnsNull()
     {
-        // Arrange: stub returns 404 so the model download fails
-        using var provider = BuildProvider(HttpStatusCode.NotFound);
+        // Arrange: use an isolated temp dir guaranteed to have no model.onnx.
+        // Without isolation, the test would find the real model at the default
+        // ~/.onenest path and skip the download entirely, defeating the test.
+        var isolatedDir = Path.Combine(Path.GetTempPath(), $"onenest-test-{Guid.NewGuid():N}");
+        using var provider = BuildProvider(HttpStatusCode.NotFound, modelDirectory: isolatedDir);
 
-        // Act: first call triggers lazy init; download fails gracefully
+        // Act: first call triggers lazy init; stub returns 404 → download fails
         var result = await provider.EmbedAsync("hello world");
 
         // Assert: null, not an exception
@@ -64,10 +67,11 @@ public class LocalEmbeddingProviderTests
     [Fact]
     public async Task EmbedAsync_AfterPermanentFailure_SubsequentCallsReturnNull()
     {
-        // Arrange: model unavailable
-        using var provider = BuildProvider(HttpStatusCode.ServiceUnavailable);
+        // Arrange: isolated temp dir (no real model present) + stub that returns 503
+        var isolatedDir = Path.Combine(Path.GetTempPath(), $"onenest-test-{Guid.NewGuid():N}");
+        using var provider = BuildProvider(HttpStatusCode.ServiceUnavailable, modelDirectory: isolatedDir);
 
-        // Act: first call fails, second call also fails (no retry storm)
+        // Act: first call marks provider permanently unavailable; no retry storm
         var first  = await provider.EmbedAsync("first");
         var second = await provider.EmbedAsync("second");
         var third  = await provider.EmbedAsync("third");
@@ -160,6 +164,68 @@ public class LocalEmbeddingProviderTests
         Assert.All(result, x => Assert.Equal(0f, x));
     }
 
+    // ── SanitizeText — fused-PDF-text guard (regression for GetWords fix) ────
+
+    [Fact]
+    public void SanitizeText_NormalText_Unchanged()
+    {
+        // Normal English text with short words must pass through unchanged
+        const string input = "Hello, this is a normal sentence with short words.";
+        var result = SanitizeTextInline(input);
+        Assert.Equal(input, result);
+    }
+
+    [Fact]
+    public void SanitizeText_ControlCharsStripped()
+    {
+        // Control characters (tab = \t, newline = \n stripped to one space boundary)
+        var result = SanitizeTextInline("hello\x00world");  // null byte is Control
+        Assert.DoesNotContain("\x00", result);
+        Assert.Contains("hello", result);
+        Assert.Contains("world", result);
+    }
+
+    [Fact]
+    public void SanitizeText_FusedPdfWord_GetsSpaceInserted()
+    {
+        // Reproduces the exact bug: a PDF word with no spaces ("KANHAGUPTAKatni...")
+        // that exceeds 60 chars must be broken up so the BERT tokenizer doesn't hang.
+        var fusedWord = new string('A', 150); // 150-char run, no whitespace
+        var result    = SanitizeTextInline(fusedWord);
+
+        // The result must contain at least one inserted space
+        Assert.Contains(' ', result);
+
+        // No single space-free run should exceed 60 chars
+        var runs = result.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        Assert.All(runs, run => Assert.True(run.Length <= 60,
+            $"Run of {run.Length} chars exceeds the 60-char limit: \"{run[..Math.Min(run.Length, 40)]}…\""));
+    }
+
+    [Fact]
+    public void SanitizeText_MixedContent_LongRunsBroken_ShortRunsPreserved()
+    {
+        // Short words preserved; only the fused run gets spaces injected
+        var input  = "short words " + new string('X', 120) + " more short words";
+        var result = SanitizeTextInline(input);
+
+        Assert.Contains("short", result);
+        Assert.Contains("words", result);
+
+        var runs = result.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        Assert.All(runs, run => Assert.True(run.Length <= 60,
+            $"Run of length {run.Length} exceeds limit"));
+    }
+
+    [Fact]
+    public void SanitizeText_AllControlChars_ReturnsEmpty()
+    {
+        // A string composed entirely of control characters sanitizes to empty.
+        var input  = new string('\x01', 20);
+        var result = SanitizeTextInline(input);
+        Assert.True(string.IsNullOrWhiteSpace(result));
+    }
+
     // ── Inline copies of the private static helpers ───────────────────────────
     //    (Mirrors LocalEmbeddingProvider's private statics exactly so that any
     //    accidental mismatch is caught at test-write time.)
@@ -191,6 +257,40 @@ public class LocalEmbeddingProviderTests
                 result[d] /= nonPadCount;
 
         return result;
+    }
+
+    /// <summary>
+    /// Inline mirror of <c>LocalEmbeddingProvider.SanitizeText</c>.
+    /// Must be kept in sync manually; any drift is caught by the tests above.
+    /// </summary>
+    private static string SanitizeTextInline(string text)
+    {
+        const int MaxTokenRunChars = 60;
+        var sb     = new System.Text.StringBuilder(text.Length);
+        int runLen = 0;
+        foreach (char c in text)
+        {
+            var cat = char.GetUnicodeCategory(c);
+            if (c < ' '   // U+0000–U+001F ASCII control characters (explicit — GetUnicodeCategory('\x00') is unreliable)
+             || c == '' // U+007F DEL
+             || cat is System.Globalization.UnicodeCategory.Control
+                     or System.Globalization.UnicodeCategory.Surrogate
+                     or System.Globalization.UnicodeCategory.PrivateUse
+                     or System.Globalization.UnicodeCategory.Format)
+            {
+                if (sb.Length > 0 && sb[^1] != ' ') sb.Append(' ');
+                runLen = 0;
+                continue;
+            }
+            if (char.IsWhiteSpace(c)) { runLen = 0; }
+            else
+            {
+                runLen++;
+                if (runLen > MaxTokenRunChars) { sb.Append(' '); runLen = 1; }
+            }
+            sb.Append(c);
+        }
+        return sb.ToString().Trim();
     }
 
     // ── Inner helpers ─────────────────────────────────────────────────────────

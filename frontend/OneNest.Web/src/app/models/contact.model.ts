@@ -48,3 +48,11 @@ export interface UpdateContactStatusRequest {
   status: ContactStatus;
   adminReply?: string;
 }
+
+export interface ContactSummary {
+  totalMessages: number;
+  newCount: number;
+  readCount: number;
+  resolvedCount: number;
+  recentMessages: ContactMessage[];
+}

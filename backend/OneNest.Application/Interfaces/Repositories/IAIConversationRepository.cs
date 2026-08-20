@@ -11,5 +11,6 @@ public interface IAIConversationRepository
     Task<List<AIMessage>> GetLastMessagesAsync(Guid conversationId, Guid userId, int limit);
     Task AddConversationAsync(AIConversation conversation);
     Task UpdateConversationAsync(AIConversation conversation);
+    Task DeleteConversationAsync(AIConversation conversation);
     Task AddMessageAsync(AIMessage message);
 }

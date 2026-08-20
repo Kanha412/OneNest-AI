@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OneNest.Application.DTOs.Notes;
 using OneNest.Application.Interfaces.Repositories;
 using OneNest.Application.Interfaces.Security;
@@ -12,15 +14,21 @@ public class NoteService : INoteService
     private readonly INoteRepository _noteRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly ISemanticIndexService _semanticIndexService;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<NoteService> _logger;
 
     public NoteService(
         INoteRepository noteRepository,
         ICurrentUserService currentUserService,
-        ISemanticIndexService semanticIndexService)
+        ISemanticIndexService semanticIndexService,
+        IServiceScopeFactory scopeFactory,
+        ILogger<NoteService> logger)
     {
         _noteRepository = noteRepository;
         _currentUserService = currentUserService;
         _semanticIndexService = semanticIndexService;
+        _scopeFactory = scopeFactory;
+        _logger = logger;
     }
 
     public async Task<List<NoteResponse>> GetAllAsync()
@@ -52,10 +60,8 @@ public class NoteService : INoteService
 
     await _noteRepository.AddAsync(note);
 
-    // Phase 8 — best-effort semantic indexing; never blocks note creation
-    await _semanticIndexService.IndexAsync(
-        note.UserId, EmbeddingSourceType.Note, note.Id,
-        note.Title, note.Content ?? string.Empty);
+    // Phase 8 — index in background; same rationale as DocumentService
+    EnqueueIndex(note.UserId, note.Id, note.Title, note.Content ?? string.Empty);
 
     return new NoteResponse
 {
@@ -96,10 +102,8 @@ public async Task<NoteResponse?> UpdateAsync(Guid id, UpdateNoteRequest request)
 
     await _noteRepository.UpdateAsync(note);
 
-    // Phase 8 — re-index with updated content
-    await _semanticIndexService.IndexAsync(
-        note.UserId, EmbeddingSourceType.Note, note.Id,
-        note.Title, note.Content ?? string.Empty);
+    // Phase 8 — re-index with updated content in background
+    EnqueueIndex(note.UserId, note.Id, note.Title, note.Content ?? string.Empty);
 
     return new NoteResponse
     {
@@ -124,4 +128,43 @@ public async Task TogglePinAsync(Guid id)
 
     await _noteRepository.UpdateAsync(note);
 }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Schedules semantic indexing for a note on a background thread using its own
+    /// DI scope.  This keeps note create/update HTTP responses instant and prevents
+    /// client-disconnect from aborting a partially-written EmbeddingRecord.
+    /// </summary>
+    private void EnqueueIndex(Guid userId, Guid noteId, string title, string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        var capturedUserId = userId;
+        var capturedId     = noteId;
+        var capturedTitle  = title;
+        var capturedText   = text;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await using var scope        = _scopeFactory.CreateAsyncScope();
+                var             indexService = scope.ServiceProvider
+                                                   .GetRequiredService<ISemanticIndexService>();
+                await indexService.IndexAsync(
+                    capturedUserId, EmbeddingSourceType.Note,
+                    capturedId, capturedTitle, capturedText);
+            }
+            catch (Exception ex)
+            {
+                // Best-effort; the Note row is already committed.
+                // Run POST /api/semantic-search/backfill to retry.
+                _logger.LogError(ex,
+                    "NoteService: background semantic indexing FAILED for note {NoteId} ('{Title}'). " +
+                    "Run POST /api/semantic-search/backfill to retry.",
+                    capturedId, capturedTitle);
+            }
+        });
+    }
 }

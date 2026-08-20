@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using OneNest.Application.DTOs.SemanticSearch;
 using OneNest.Application.Interfaces.AI;
 using OneNest.Application.Interfaces.Repositories;
@@ -26,15 +27,18 @@ public class SemanticSearchService : ISemanticSearchService
     // count ensures we can still return topK distinct *sources* after grouping.
     private const int FetchMultiplier = 10;
 
-    private readonly IEmbeddingProvider    _embeddingProvider;
-    private readonly IEmbeddingRepository  _embeddingRepository;
+    private readonly IEmbeddingProvider              _embeddingProvider;
+    private readonly IEmbeddingRepository            _embeddingRepository;
+    private readonly ILogger<SemanticSearchService>  _logger;
 
     public SemanticSearchService(
-        IEmbeddingProvider   embeddingProvider,
-        IEmbeddingRepository embeddingRepository)
+        IEmbeddingProvider              embeddingProvider,
+        IEmbeddingRepository            embeddingRepository,
+        ILogger<SemanticSearchService>  logger)
     {
         _embeddingProvider   = embeddingProvider;
         _embeddingRepository = embeddingRepository;
+        _logger              = logger;
     }
 
     public async Task<List<SemanticSearchResult>> SearchAsync(
@@ -49,13 +53,25 @@ public class SemanticSearchService : ISemanticSearchService
             request.Query, cancellationToken);
 
         if (queryVector is null || queryVector.Length == 0)
+        {
+            _logger.LogWarning(
+                "SemanticSearchService: EmbedAsync returned null for query — " +
+                "LocalEmbeddingProvider may have failed to initialise. " +
+                "Restart the backend; the model will re-initialise on next request.");
             return [];
+        }
 
         var topK   = Math.Clamp(request.TopK, MinTopK, MaxTopK);
         var fetchK = topK * FetchMultiplier;
 
         var rows = await _embeddingRepository.SearchAsync(
             userId, queryVector, fetchK, cancellationToken);
+
+        if (rows.Count == 0)
+            _logger.LogInformation(
+                "SemanticSearchService: SearchAsync returned 0 rows for user {UserId}. " +
+                "Run POST /api/semantic-search/backfill to index your workspace.",
+                userId);
 
         // 1. Apply optional source-type filter
         var filtered = request.SourceType.HasValue

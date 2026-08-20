@@ -297,5 +297,61 @@
 
   }
 
+  @if (contactSummary(); as contact) {
+
+    <h2 class="section-title">✉ Contact & Support</h2>
+
+    <div class="stats-grid">
+
+      <div class="stat-card notes">
+        <span class="stat-value">{{ contact.totalMessages }}</span>
+        <span class="stat-label">Total Messages</span>
+        <span class="stat-sub">submitted to support</span>
+      </div>
+
+      <div class="stat-card overdue">
+        <span class="stat-value">{{ contact.newCount }}</span>
+        <span class="stat-label">Awaiting Reply</span>
+        <span class="stat-sub">new / unread</span>
+      </div>
+
+      <div class="stat-card tasks">
+        <span class="stat-value">{{ contact.readCount }}</span>
+        <span class="stat-label">Under Review</span>
+        <span class="stat-sub">being looked at</span>
+      </div>
+
+      <div class="stat-card done">
+        <span class="stat-value">{{ contact.resolvedCount }}</span>
+        <span class="stat-label">Resolved</span>
+        <span class="stat-sub">issues closed</span>
+      </div>
+
+    </div>
+
+    @if (contact.recentMessages.length) {
+      <div class="card recent-transactions-card">
+        <h3>Recent Messages</h3>
+        <ul class="recent-list">
+          @for (msg of contact.recentMessages; track msg.id) {
+            <li class="recent-item">
+              <div>
+                <strong>{{ msg.subject }}</strong>
+                <small>{{ contactStatusLabels[msg.status] }} · {{ msg.createdAt | date:'dd MMM yyyy' }}</small>
+              </div>
+              <span class="badge"
+                [class.badge-new]="msg.status === ContactStatus.New"
+                [class.badge-read]="msg.status === ContactStatus.Read"
+                [class.badge-resolved]="msg.status === ContactStatus.Resolved">
+                {{ contactStatusLabels[msg.status] }}
+              </span>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+  }
+
   }
 </section>

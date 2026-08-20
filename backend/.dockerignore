@@ -1,0 +1,31 @@
+# ── Build artifacts ───────────────────────────────────────────────────────────
+**/bin/
+**/obj/
+
+# ── IDE and OS ────────────────────────────────────────────────────────────────
+.vs/
+.vscode/
+**/.DS_Store
+**/Thumbs.db
+*.user
+*.suo
+
+# ── Local secrets (NEVER include in Docker image) ─────────────────────────────
+**/appsettings.Development.json
+**/appsettings.*.Local.json
+# User Secrets are machine-local; production secrets come from environment vars.
+
+# ── Test project ──────────────────────────────────────────────────────────────
+# Tests are not needed in the production image.
+OneNest.Tests/
+
+# ── Local model cache ─────────────────────────────────────────────────────────
+# The ONNX model is downloaded at docker build time (Stage 2) with SHA256 verification.
+# The local models/ directory is excluded from the Docker build context.
+models/
+
+# ── Uploads ───────────────────────────────────────────────────────────────────
+**/uploads/
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log

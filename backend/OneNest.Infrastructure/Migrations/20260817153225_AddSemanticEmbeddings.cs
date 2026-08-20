@@ -23,10 +23,11 @@ namespace OneNest.Infrastructure.Migrations
     ///         text chunk — identified by <c>ChunkIndex</c> (0-based).</item>
     ///   <item>UNIQUE constraint on (UserId, SourceType, SourceId, ChunkIndex)
     ///         enables O(1) upsert and clean re-index on edit.</item>
-    ///   <item>Default column width is <c>vector(768)</c>, matching the Gemini
-    ///         <c>text-embedding-004</c> provider (default).  For the Local/MiniLM
-    ///         provider (384 dims) the column must be <c>vector(384)</c> — update
-    ///         this migration before first apply when using that provider.</item>
+    ///   <item>Column width is <c>vector(384)</c>, matching the default
+    ///         <c>LocalEmbeddingProvider</c> (all-MiniLM-L6-v2, 384 dims).
+    ///         To switch to <c>GeminiEmbeddingProvider</c> (768 dims) set
+    ///         <c>Embeddings:Provider=Gemini</c> and change the column type here
+    ///         before applying this migration to a fresh database.</item>
     ///   <item>No ANN index: at personal-scale (&lt;10 K rows) a sequential
     ///         cosine scan completes in &lt;5 ms.  Add
     ///         <c>USING hnsw (…) WITH (m=16, ef_construction=64)</c> when
@@ -51,7 +52,7 @@ namespace OneNest.Infrastructure.Migrations
                     ""SourceId""   UUID         NOT NULL,
                     ""Title""      TEXT,
                     ""ChunkIndex"" INTEGER      NOT NULL DEFAULT 0,
-                    ""Embedding""  vector(768)  NOT NULL,
+                    ""Embedding""  vector(384)  NOT NULL,
                     ""CreatedAt""  TIMESTAMP    NOT NULL,
                     ""UpdatedAt""  TIMESTAMP,
                     CONSTRAINT ""PK_EmbeddingRecords"" PRIMARY KEY (""Id"")

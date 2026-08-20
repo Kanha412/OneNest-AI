@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44">
+  <!-- Circular background -->
+  <circle cx="22" cy="22" r="21" fill="#6366F1"/>
+  <!-- Outer nest arc — wide bowl -->
+  <path d="M5 19 Q22 40 39 19" stroke="white" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+  <!-- Inner nest arc — rim of nest -->
+  <path d="M9 19 Q22 32 35 19" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Left egg (drawn after arcs so it sits in front) -->
+  <ellipse cx="16" cy="22" rx="4.5" ry="4" fill="white"/>
+  <!-- Right egg -->
+  <ellipse cx="28" cy="22" rx="4.5" ry="4" fill="white"/>
+</svg>

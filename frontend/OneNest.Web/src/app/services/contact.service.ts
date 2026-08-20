@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ContactMessage, CreateContactRequest } from '../models/contact.model';
+import { ContactMessage, ContactSummary, CreateContactRequest } from '../models/contact.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -15,5 +15,9 @@ export class ContactService {
 
   getMyMessages(): Observable<ContactMessage[]> {
     return this.http.get<ContactMessage[]>(`${this.apiUrl}/my`);
+  }
+
+  getSummary(): Observable<ContactSummary> {
+    return this.http.get<ContactSummary>(`${this.apiUrl}/summary`);
   }
 }

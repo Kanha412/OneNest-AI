@@ -6,4 +6,5 @@ public interface IContactService
 {
     Task<ContactMessageResponse> CreateAsync(CreateContactRequest request);
     Task<List<ContactMessageResponse>> GetMyMessagesAsync();
+    Task<ContactSummaryResponse> GetSummaryAsync();
 }

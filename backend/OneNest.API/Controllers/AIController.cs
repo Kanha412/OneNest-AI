@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OneNest.Application.DTOs.AI;
+using OneNest.Application.DTOs.Rag;
+using OneNest.Application.Interfaces.Security;
 using OneNest.Application.Interfaces.Services;
 
 namespace OneNest.API.Controllers;
@@ -12,11 +14,19 @@ public class AIController : ControllerBase
 {
     private readonly IAIService _aiService;
     private readonly IAIConversationService _conversationService;
+    private readonly IRagService _ragService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public AIController(IAIService aiService, IAIConversationService conversationService)
+    public AIController(
+        IAIService aiService,
+        IAIConversationService conversationService,
+        IRagService ragService,
+        ICurrentUserService currentUserService)
     {
         _aiService = aiService;
         _conversationService = conversationService;
+        _ragService = ragService;
+        _currentUserService = currentUserService;
     }
 
     [HttpGet("conversations")]
@@ -122,6 +132,36 @@ public class AIController : ControllerBase
             return MapInvalidOperation(ex);
         }
     }
+
+    // ── Phase 9 — RAG ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Answers a natural-language question by retrieving the most relevant
+    /// notes and documents from the user's personal content and grounding a
+    /// Gemini response in them.
+    ///
+    /// This is an explicit opt-in endpoint — standard conversation and semantic
+    /// search are unaffected.  The UserId is always resolved from the JWT;
+    /// it cannot be supplied by the client.
+    /// </summary>
+    [HttpPost("rag")]
+    public async Task<ActionResult<RagResponse>> Ask(
+        [FromBody] RagRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var userId = _currentUserService.UserId;
+            var response = await _ragService.AskAsync(userId, request, cancellationToken);
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return MapInvalidOperation(ex);
+        }
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
 
     private ActionResult MapInvalidOperation(InvalidOperationException ex)
     {

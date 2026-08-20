@@ -7,6 +7,8 @@ import {
   ConversationResponse,
   ConversationSummary,
   CreateConversationRequest,
+  RagRequest,
+  RagResponse,
   RenameConversationRequest,
   SendMessageRequest
 } from '../models/ai.model';
@@ -57,5 +59,10 @@ export class AiService {
 
   unarchiveConversation(conversationId: string): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/conversations/${conversationId}/unarchive`, {});
+  }
+
+  /** Phase 9 — RAG: answer a query grounded in the user's personal content. */
+  askRag(request: RagRequest): Observable<RagResponse> {
+    return this.http.post<RagResponse>(`${this.baseUrl}/rag`, request);
   }
 }

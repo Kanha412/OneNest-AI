@@ -47,12 +47,6 @@ public class SettingsService : ISettingsService
         user.FullName = displayName;
         user.UpdatedAt = DateTime.UtcNow;
 
-        settings.EnableWorkspaceContext = request.EnableWorkspaceContext;
-        settings.ContextDepth = Normalize(request.ContextDepth, "medium");
-        settings.DefaultConversationMode = Normalize(request.DefaultConversationMode, "workspace");
-        settings.ResponseStyle = Normalize(request.ResponseStyle, "balanced");
-        settings.EnableSmartSuggestions = request.EnableSmartSuggestions;
-
         settings.EnableAppointmentReminders = request.EnableAppointmentReminders;
         settings.EnableMedicineReminders = request.EnableMedicineReminders;
         settings.EnableTaskReminders = request.EnableTaskReminders;
@@ -103,14 +97,6 @@ public class SettingsService : ISettingsService
                 Email = user.Email,
                 MemberSince = user.CreatedAt,
                 LastLoginAt = user.LastLoginAt
-            },
-            AiPreferences = new AiPreferencesSettingsResponse
-            {
-                EnableWorkspaceContext = settings.EnableWorkspaceContext,
-                ContextDepth = settings.ContextDepth,
-                DefaultConversationMode = settings.DefaultConversationMode,
-                ResponseStyle = settings.ResponseStyle,
-                EnableSmartSuggestions = settings.EnableSmartSuggestions
             },
             Notifications = new NotificationSettingsResponse
             {

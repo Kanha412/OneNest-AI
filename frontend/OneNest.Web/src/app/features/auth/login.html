@@ -1,51 +1,78 @@
 <app-toast />
 <section class="auth-page">
-  <div class="auth-card">
-    <div class="auth-brand">🏡 OneNest AI</div>
-    <h1>Sign In</h1>
-    <p class="auth-subtitle">Welcome back. Please enter your details.</p>
 
-    <form [formGroup]="loginForm" (ngSubmit)="submit()">
-      @if (errorMessage()) {
-        <div class="auth-error">{{ errorMessage() }}</div>
-      }
+  <!-- ── Left: brand hero ── -->
+  <div class="auth-hero">
+    <div class="auth-hero-logo">
+      <svg class="auth-hero-mark" viewBox="0 0 44 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M2 14 Q22 34 42 14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M8 14 Q22 28 36 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <ellipse cx="16" cy="17" rx="4" ry="3.5" fill="currentColor"/>
+        <ellipse cx="28" cy="17" rx="4" ry="3.5" fill="currentColor"/>
+      </svg>
+      <span class="auth-hero-wordmark"><span class="dim">One</span>Nest</span>
+    </div>
 
-      <div class="form-group">
-        <label>Email</label>
-        <input
-          type="email"
-          formControlName="email"
-          placeholder="you@example.com"
-          [class.is-invalid]="loginForm.controls.email.invalid && loginForm.controls.email.touched">
+    <h2 class="auth-hero-tagline">Your life,<br>organized in<br>one place.</h2>
+    <p class="auth-hero-sub">Notes, tasks, documents, finances, and AI — all in one personal workspace.</p>
 
-        @if (loginForm.controls.email.invalid && loginForm.controls.email.touched) {
-          <small class="field-error">Enter a valid email.</small>
-        }
-      </div>
-
-      <div class="form-group">
-        <label>Password</label>
-        <input
-          type="password"
-          formControlName="password"
-          placeholder="Enter your password"
-          [class.is-invalid]="loginForm.controls.password.invalid && loginForm.controls.password.touched">
-
-        @if (loginForm.controls.password.invalid && loginForm.controls.password.touched) {
-          <small class="field-error">Password is required.</small>
-        }
-      </div>
-
-      <button
-        type="submit"
-        [disabled]="loginForm.invalid || isSubmitting()">
-        {{ isSubmitting() ? 'Signing in...' : 'Sign In' }}
-      </button>
-    </form>
-
-    <p class="auth-switch">
-      Don't have an account?
-      <a routerLink="/register">Create one</a>
-    </p>
+    <div class="auth-hero-features">
+      <div class="auth-hero-feature"><span class="auth-hero-dot"></span>Smart notes &amp; documents</div>
+      <div class="auth-hero-feature"><span class="auth-hero-dot"></span>Tasks &amp; expense tracking</div>
+      <div class="auth-hero-feature"><span class="auth-hero-dot"></span>AI assistant &amp; semantic search</div>
+      <div class="auth-hero-feature"><span class="auth-hero-dot"></span>Health hub &amp; records</div>
+    </div>
   </div>
+
+  <!-- ── Right: form panel ── -->
+  <div class="auth-form-panel">
+    <div class="auth-card">
+      <h1>Sign In</h1>
+      <p class="auth-subtitle">Welcome back. Please enter your details.</p>
+
+      <form [formGroup]="loginForm" (ngSubmit)="submit()">
+        @if (errorMessage()) {
+          <div class="auth-error">{{ errorMessage() }}</div>
+        }
+
+        <div class="form-group">
+          <label>Email</label>
+          <input
+            type="email"
+            formControlName="email"
+            placeholder="you@example.com"
+            [class.is-invalid]="loginForm.controls.email.invalid && loginForm.controls.email.touched">
+
+          @if (loginForm.controls.email.invalid && loginForm.controls.email.touched) {
+            <small class="field-error">Enter a valid email.</small>
+          }
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <input
+            type="password"
+            formControlName="password"
+            placeholder="Enter your password"
+            [class.is-invalid]="loginForm.controls.password.invalid && loginForm.controls.password.touched">
+
+          @if (loginForm.controls.password.invalid && loginForm.controls.password.touched) {
+            <small class="field-error">Password is required.</small>
+          }
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="loginForm.invalid || isSubmitting()">
+          {{ isSubmitting() ? 'Signing in…' : 'Sign In' }}
+        </button>
+      </form>
+
+      <p class="auth-switch">
+        Don't have an account? <a routerLink="/register">Create one</a>
+      </p>
+    </div>
+  </div>
+
 </section>

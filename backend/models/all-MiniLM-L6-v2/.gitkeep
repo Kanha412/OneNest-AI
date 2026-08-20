@@ -1,0 +1,22 @@
+# This directory holds the all-MiniLM-L6-v2 ONNX model used by LocalEmbeddingProvider.
+#
+# Model variant: Xenova/all-MiniLM-L6-v2 — INT8 dynamic-quantized ONNX
+# Source URL:    https://huggingface.co/Xenova/all-MiniLM-L6-v2/resolve/main/onnx/model_quantized.onnx
+# Local filename: model.onnx  (saved as model.onnx regardless of source filename)
+# Size:          ~22 MB  (22,972,370 bytes)
+# SHA256:        afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1
+# License:       Apache 2.0
+# Output:        384-dimensional L2-normalised float32 embedding vectors
+# Inputs:        input_ids (int64), attention_mask (int64), token_type_ids (int64)
+#
+# The model binary (model.onnx) is NOT committed to git — see root .gitignore.
+#
+# Local development:
+#   Run the application once — LocalEmbeddingProvider downloads the quantized model
+#   (~22 MB) from HuggingFace CDN to ~/.onenest/models/all-MiniLM-L6-v2/model.onnx.
+#   Subsequent restarts skip the download entirely.
+#
+# Docker / Render:
+#   The Dockerfile downloads model_quantized.onnx at docker build time,
+#   verifies its SHA256, and saves it as /app/models/all-MiniLM-L6-v2/model.onnx.
+#   No HuggingFace access is required at container startup.

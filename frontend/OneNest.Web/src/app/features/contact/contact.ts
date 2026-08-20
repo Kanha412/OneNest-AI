@@ -6,6 +6,7 @@ import { finalize } from 'rxjs';
 import { ContactService } from '../../services/contact.service';
 import { ToastService } from '../../shared/toast/toast.service';
 import { Spinner } from '../../shared/spinner/spinner';
+import { Paginator } from '../../shared/paginator/paginator';
 import {
   ContactMessage,
   ContactCategory,
@@ -16,7 +17,7 @@ import {
 
 @Component({
   selector: 'app-contact',
-  imports: [ReactiveFormsModule, DatePipe, Spinner],
+  imports: [ReactiveFormsModule, DatePipe, Spinner, Paginator],
   templateUrl: './contact.html',
   styleUrl: './contact.css'
 })
@@ -42,6 +43,18 @@ export class Contact implements OnInit {
   readonly isSaving = signal(false);
   readonly expandedId = signal<string | null>(null);
 
+  // ── Pagination ───────────────────────────────────────────────────────────
+  readonly pageSize = 5;
+  readonly currentPage = signal(1);
+  readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.messages().length / this.pageSize))
+  );
+  readonly pagedMessages = computed(() => {
+    const page  = Math.min(this.currentPage(), this.totalPages());
+    const start = (page - 1) * this.pageSize;
+    return this.messages().slice(start, start + this.pageSize);
+  });
+
   readonly contactForm = this.fb.group({
     subject: ['', [Validators.required, Validators.maxLength(200)]],
     category: [ContactCategory.General, Validators.required],
@@ -65,7 +78,7 @@ export class Contact implements OnInit {
     this.contactService.getMyMessages()
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: messages => this.messages.set(messages),
+        next: messages => { this.messages.set(messages); this.currentPage.set(1); },
         error: () => this.toastService.error('Failed to load messages')
       });
   }

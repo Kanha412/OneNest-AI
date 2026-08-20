@@ -8,6 +8,7 @@ import { TasksService } from '../../services/tasks.service';
 import { ExpensesService } from '../../services/expenses.service';
 import { DocumentsService } from '../../services/documents.service';
 import { HealthHubService } from '../../services/health-hub.service';
+import { ContactService } from '../../services/contact.service';
 import { ToastService } from '../../shared/toast/toast.service';
 import {
   ExpenseSummary,
@@ -19,6 +20,7 @@ import {
   DOCUMENT_CATEGORY_LABELS
 } from '../../models/document.model';
 import { HealthSummary } from '../../models/health.model';
+import { ContactSummary, CONTACT_STATUS_LABELS, ContactStatus } from '../../models/contact.model';
 import { ChartComponent } from '../../shared/chart/chart';
 import { Spinner } from '../../shared/spinner/spinner';
 import { ChartConfiguration } from 'chart.js';
@@ -36,7 +38,11 @@ export class Dashboard {
   private readonly expensesService = inject(ExpensesService);
   private readonly documentsService = inject(DocumentsService);
   private readonly healthHubService = inject(HealthHubService);
+  private readonly contactService = inject(ContactService);
   private readonly toastService = inject(ToastService);
+
+  readonly contactStatusLabels = CONTACT_STATUS_LABELS;
+  readonly ContactStatus = ContactStatus;
 
   /** First name extracted from the logged-in user's full name. */
   protected readonly firstName = computed(() => {
@@ -119,11 +125,19 @@ export class Dashboard {
     { initialValue: null }
   );
 
+  private readonly contactSummaryRaw = toSignal<ContactSummary | null>(
+    this.contactService.getSummary().pipe(catchError(() => of(null))),
+    { initialValue: null }
+  );
+
+  readonly contactSummary = this.contactSummaryRaw;
+
   readonly isLoading = computed(() =>
     !this._hasLoadError() && (
       this.summary() === null ||
       this.documentSummary() === null ||
-      this.healthSummary() === null
+      this.healthSummary() === null ||
+      this.contactSummaryRaw() === null
     )
   );
 

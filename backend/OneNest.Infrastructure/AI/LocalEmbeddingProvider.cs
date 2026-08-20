@@ -13,10 +13,13 @@ namespace OneNest.Infrastructure.AI;
 /// <list type="bullet">
 ///   <item>Produces 384-dimensional L2-normalised embedding vectors.</item>
 ///   <item>Requires no API key, no paid service, no external runtime.</item>
-///   <item>The ONNX model (~22 MB) is downloaded from HuggingFace CDN on first
-///         use and cached in <see cref="LocalEmbeddingOptions.ModelDirectory"/>.
+///   <item>The INT8-quantized ONNX model (~22 MB) is downloaded from HuggingFace
+///         CDN on first use and cached in
+///         <see cref="LocalEmbeddingOptions.ModelDirectory"/> as <c>model.onnx</c>.
 ///         Tokenisation uses the BERT uncased vocabulary bundled with the
 ///         BERTTokenizers NuGet package — no vocab download required.</item>
+///   <item>In production (Docker/Render) the model is bundled in the image —
+///         no HuggingFace access is required at container start time.</item>
 ///   <item>If initialisation fails the provider returns <c>null</c> for every
 ///         request — semantic search is silently disabled; all other features
 ///         remain unaffected.</item>
@@ -27,9 +30,13 @@ namespace OneNest.Infrastructure.AI;
 public sealed class LocalEmbeddingProvider : IEmbeddingProvider, IDisposable
 {
     // ── Model source (HuggingFace CDN — no auth required) ────────────────────
+    // Source: Xenova/all-MiniLM-L6-v2 — INT8 dynamic-quantized ONNX variant.
+    // Same weights as sentence-transformers/all-MiniLM-L6-v2; same 384-dim output.
+    // Verified: inputs {input_ids, attention_mask, token_type_ids} → last_hidden_state[1,seq,384].
+    // Downloaded as model_quantized.onnx but saved locally as model.onnx (filename transparent to caller).
 
     private const string ModelUrl =
-        "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx";
+        "https://huggingface.co/Xenova/all-MiniLM-L6-v2/resolve/main/onnx/model_quantized.onnx";
 
     // ── Model constants ───────────────────────────────────────────────────────
 
@@ -77,12 +84,45 @@ public sealed class LocalEmbeddingProvider : IEmbeddingProvider, IDisposable
             await EnsureInitializedAsync(cancellationToken);
 
             if (!_available || _session is null || _tokenizer is null)
+            {
+                _logger.LogWarning(
+                    "LocalEmbeddingProvider: provider not available (initialized={Init}, available={Avail}). " +
+                    "Check startup logs for the init failure reason.",
+                    _initialized, _available);
                 return null;
+            }
+
+            // ── Sanitise text before tokenisation ─────────────────────────────
+            // PDF-extracted text can contain control characters, zero-width
+            // joiners, and other non-printable Unicode that crash or confuse
+            // the BERT tokenizer.  Strip anything outside printable ASCII+
+            // common Unicode letters/punctuation so inference is always stable.
+            var sanitized = SanitizeText(text);
+            if (string.IsNullOrWhiteSpace(sanitized))
+            {
+                _logger.LogWarning(
+                    "LocalEmbeddingProvider: SanitizeText returned empty for a {Len}-char input " +
+                    "(all chars were control/format/surrogate). Skipping inference.",
+                    text.Length);
+                return null;
+            }
 
             // ── Tokenise ──────────────────────────────────────────────────────
             // Encode returns List<(long InputIds, long TokenTypeIds, long AttentionMask)>
             // — one element per token position, padded to MaxSequenceLength.
-            var encoded = _tokenizer.Encode(MaxSequenceLength, text);
+            IList<(long InputIds, long TokenTypeIds, long AttentionMask)> encoded;
+            try
+            {
+                encoded = _tokenizer.Encode(MaxSequenceLength, sanitized);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "LocalEmbeddingProvider: tokenizer.Encode threw for a {Len}-char input. " +
+                    "Check for unsupported Unicode characters in the document text.",
+                    sanitized.Length);
+                return null;
+            }
 
             int seqLen = encoded.Count; // == MaxSequenceLength after padding
 
@@ -105,27 +145,42 @@ public sealed class LocalEmbeddingProvider : IEmbeddingProvider, IDisposable
             using var typeIdsOrt   = OrtValue.CreateTensorValueFromMemory(tokenTypeIds,  shape);
 
             // ── Run inference ─────────────────────────────────────────────────
-            using var runOptions = new RunOptions();
-            using var results = _session.Run(
-                runOptions,
-                inputNames:  new[] { "input_ids",  "attention_mask", "token_type_ids"   },
-                inputValues: new[] { inputIdsOrt,  maskOrt,          typeIdsOrt         },
-                outputNames: new[] { "last_hidden_state" });
+            IDisposableReadOnlyCollection<OrtValue> results;
+            try
+            {
+                using var runOptions = new RunOptions();
+                results = _session.Run(
+                    runOptions,
+                    inputNames:  new[] { "input_ids",  "attention_mask", "token_type_ids"   },
+                    inputValues: new[] { inputIdsOrt,  maskOrt,          typeIdsOrt         },
+                    outputNames: new[] { "last_hidden_state" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "LocalEmbeddingProvider: ONNX session.Run threw for a {SeqLen}-token input. " +
+                    "The model file may be corrupt or incompatible.",
+                    seqLen);
+                return null;
+            }
 
-            // ── Read last_hidden_state [1, seqLen, 384] ───────────────────────
-            // GetTensorDataAsSpan returns the flat row-major data:
-            //   flat index = (0 * seqLen + t) * EmbeddingDimension + d
-            var hiddenFlat = results[0].GetTensorDataAsSpan<float>();
+            using (results)
+            {
+                // ── Read last_hidden_state [1, seqLen, 384] ───────────────────────
+                // GetTensorDataAsSpan returns the flat row-major data:
+                //   flat index = (0 * seqLen + t) * EmbeddingDimension + d
+                var hiddenFlat = results[0].GetTensorDataAsSpan<float>();
 
-            // ── Mean-pool over non-padding tokens → L2 normalise ──────────────
-            var embedding = MeanPool(hiddenFlat, attentionMask, seqLen);
-            L2Normalize(embedding);
+                // ── Mean-pool over non-padding tokens → L2 normalise ──────────────
+                var embedding = MeanPool(hiddenFlat, attentionMask, seqLen);
+                L2Normalize(embedding);
 
-            return embedding;
+                return embedding;
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "LocalEmbeddingProvider: inference failed.");
+            _logger.LogWarning(ex, "LocalEmbeddingProvider: unexpected error during embedding.");
             return null;
         }
     }
@@ -136,7 +191,17 @@ public sealed class LocalEmbeddingProvider : IEmbeddingProvider, IDisposable
     {
         if (_initialized) return;
 
-        await _initLock.WaitAsync(cancellationToken);
+        // Use CancellationToken.None for the lock and all init I/O.
+        //
+        // WHY: initialization is a one-time, long-running operation (model download
+        // + tokenizer construction + ONNX session creation).  Passing the caller's
+        // HTTP request token here would permanently kill the provider if the
+        // request is cancelled before init completes (e.g. user closes Swagger
+        // mid-backfill).  Once _initialized=true / _available=false, ALL
+        // subsequent EmbedAsync calls short-circuit and return null — no retry
+        // ever occurs.  CancellationToken.None ensures init always completes
+        // (or fails for a non-transient reason) regardless of HTTP lifetime.
+        await _initLock.WaitAsync(CancellationToken.None);
         try
         {
             if (_initialized) return; // double-check after acquiring lock
@@ -145,11 +210,28 @@ public sealed class LocalEmbeddingProvider : IEmbeddingProvider, IDisposable
             Directory.CreateDirectory(modelDir);
 
             var modelPath = Path.Combine(modelDir, "model.onnx");
-            await DownloadIfMissingAsync(ModelUrl, modelPath, "ONNX model (~22 MB)", cancellationToken);
+            await DownloadIfMissingAsync(ModelUrl, modelPath, "ONNX model (~22 MB, INT8 quantized)", CancellationToken.None);
 
-            // Tokeniser uses the BERT uncased vocabulary bundled inside the
-            // BERTTokenizers NuGet package — no extra download needed.
-            _tokenizer = new BertUncasedBaseTokenizer();
+            // BertUncasedBaseTokenizer resolves its vocabulary file using the
+            // process working directory (CWD).  The vocabulary is bundled inside
+            // the BERTTokenizers NuGet package and copied to the DLL output folder
+            // at build/publish time (Vocabularies/base_uncased.txt).
+            // CWD is not guaranteed to equal the DLL output folder (e.g. when
+            // running via `dotnet run` from the source directory).
+            // Solution: temporarily switch CWD to AppContext.BaseDirectory for the
+            // constructor call, then restore it.  SemaphoreSlim guarantees this
+            // runs on a single thread at a time, so it is safe.
+            var savedCwd = Directory.GetCurrentDirectory();
+            try
+            {
+                Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+                _tokenizer = new BertUncasedBaseTokenizer();
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(savedCwd);
+            }
+
             _session   = new InferenceSession(modelPath);
             _available = true;
 
@@ -203,6 +285,80 @@ public sealed class LocalEmbeddingProvider : IEmbeddingProvider, IDisposable
 
         _logger.LogInformation(
             "LocalEmbeddingProvider: {Label} saved to {Path}.", label, destPath);
+    }
+
+    // ── Text sanitisation ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Sanitizes text for the BERT uncased tokenizer:
+    ///
+    /// 1. Strips control characters (C0/C1), surrogates, private-use, and
+    ///    format characters (zero-width joiners, soft-hyphens, BOM, …).
+    ///    These crash or silently mis-encode in BertUncasedBaseTokenizer.
+    ///
+    /// 2. Breaks runs of non-whitespace longer than 60 characters by inserting
+    ///    spaces.  The BERTTokenizers WordPiece tokenizer is O(n²) on unknown
+    ///    "words" — a 500-char space-free run (common in PDFs where word
+    ///    boundaries are encoded as glyph offsets rather than space glyphs) can
+    ///    hang the tokenizer for minutes.  BERT's vocabulary never has entries
+    ///    longer than ~30 chars, so any run longer than 60 chars is already
+    ///    guaranteed to be tokenized as multiple sub-word tokens — splitting it
+    ///    early does not change the final embedding meaningfully.
+    ///
+    /// Call this before every <see cref="EmbedAsync"/> invocation.
+    /// </summary>
+    private static string SanitizeText(string text)
+    {
+        const int MaxTokenRunChars = 60; // BERT vocab max word length is ~30; 60 is a safe upper bound
+
+        var sb      = new System.Text.StringBuilder(text.Length);
+        int runLen  = 0; // consecutive non-whitespace chars since last whitespace
+
+        foreach (char c in text)
+        {
+            var cat = char.GetUnicodeCategory(c);
+
+            // ── Strip invisible/dangerous characters ─────────────────────────
+            // The explicit c < ' ' guard covers the ASCII control range
+            // (U+0000–U+001F) unconditionally — GetUnicodeCategory may return
+            // OtherNotAssigned for U+0000 on some .NET runtime versions.
+            if (c < ' '   // U+0000–U+001F: all ASCII control characters
+             || c == ''  // U+007F: DEL
+             || cat == System.Globalization.UnicodeCategory.Control
+             || cat == System.Globalization.UnicodeCategory.Surrogate
+             || cat == System.Globalization.UnicodeCategory.PrivateUse
+             || cat == System.Globalization.UnicodeCategory.Format)
+            {
+                // Replace with a space so word boundaries are preserved
+                if (sb.Length > 0 && sb[sb.Length - 1] != ' ')
+                    sb.Append(' ');
+                runLen = 0;
+                continue;
+            }
+
+            // ── Break oversized runs ─────────────────────────────────────────
+            // A run of 60+ non-whitespace chars is almost certainly fused PDF
+            // text (no glyph spaces).  Insert a space mid-run so WordPiece
+            // never sees a token longer than MaxTokenRunChars.
+            if (char.IsWhiteSpace(c))
+            {
+                runLen = 0;
+            }
+            else
+            {
+                runLen++;
+                if (runLen > MaxTokenRunChars)
+                {
+                    // Insert boundary space, then start a new run
+                    sb.Append(' ');
+                    runLen = 1;
+                }
+            }
+
+            sb.Append(c);
+        }
+
+        return sb.ToString().Trim();
     }
 
     // ── Pooling helpers ───────────────────────────────────────────────────────

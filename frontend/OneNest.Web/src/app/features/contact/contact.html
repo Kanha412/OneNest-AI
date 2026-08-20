@@ -71,7 +71,7 @@
     <p class="empty">No messages yet. Use the form above to get in touch.</p>
   } @else {
     <div class="message-list">
-      @for (msg of messages(); track msg.id) {
+      @for (msg of pagedMessages(); track msg.id) {
         <div class="message-card card" [class.expanded]="expandedId() === msg.id">
 
           <div class="message-summary" (click)="toggleExpand(msg.id)">
@@ -108,6 +108,11 @@
         </div>
       }
     </div>
+
+    <app-paginator
+      [page]="currentPage()"
+      [totalPages]="totalPages()"
+      (pageChange)="currentPage.set($event)" />
   }
 
 </section>

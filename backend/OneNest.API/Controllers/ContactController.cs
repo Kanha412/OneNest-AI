@@ -30,4 +30,11 @@ public class ContactController : ControllerBase
         var messages = await _contactService.GetMyMessagesAsync();
         return Ok(messages);
     }
+
+    [HttpGet("summary")]
+    public async Task<ActionResult<ContactSummaryResponse>> GetSummary()
+    {
+        var summary = await _contactService.GetSummaryAsync();
+        return Ok(summary);
+    }
 }

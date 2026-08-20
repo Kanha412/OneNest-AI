@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OneNest.Domain.Enums;
 
 namespace OneNest.Application.DTOs.SemanticSearch;
@@ -11,8 +12,14 @@ public class SemanticSearchRequest
     public int TopK { get; set; } = 5;
 
     /// <summary>
-    /// Optional filter — when set, only results of this source type are returned.
-    /// Omit to search across all source types.
+    /// Optional source-type filter.
+    /// Omit this field (or send <c>null</c>) to search across all types.
+    /// Sending <c>0</c> filters to <b>Notes</b> only; <c>1</c> filters to <b>Documents</b> only.
+    ///
+    /// <b>Important (Swagger users):</b> Swagger pre-fills this field with <c>0</c> (= Note).
+    /// Delete the field from the request body or set it to <c>null</c> if you want
+    /// results from both notes and documents.
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public EmbeddingSourceType? SourceType { get; set; }
 }

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging.Abstractions;
 using OneNest.Infrastructure.Documents;
 using Xunit;
 
@@ -8,7 +9,7 @@ namespace OneNest.Tests.Documents;
 
 public class DocumentTextExtractorTests
 {
-    private readonly DocumentTextExtractor _extractor = new();
+    private readonly DocumentTextExtractor _extractor = new(NullLogger<DocumentTextExtractor>.Instance);
 
     // ── CanExtract ──────────────────────────────────────────────────────────
 

@@ -21,7 +21,8 @@ import { AuthService } from '../../services/auth.service';
 import {
   ChatMessageResponse,
   ConversationResponse,
-  ConversationSummary
+  ConversationSummary,
+  RagResponse
 } from '../../models/ai.model';
 import { ToastService } from '../../shared/toast/toast.service';
 import { ConfirmService } from '../../shared/confirm/confirm.service';
@@ -49,6 +50,11 @@ export class AiAssistant implements OnInit, AfterViewChecked {
   readonly isLoading = signal(false);
   readonly isSending = signal(false);
   readonly isConversationLoading = signal(false);
+
+  // ── Phase 9 — RAG panel ───────────────────────────────────────────────────
+  readonly ragPanelOpen = signal(false);
+  readonly ragLoading   = signal(false);
+  readonly ragResponse  = signal<RagResponse | null>(null);
 
   readonly conversations = signal<ConversationSummary[]>([]);
   readonly selectedConversationId = signal<string | null>(null);
@@ -97,6 +103,10 @@ export class AiAssistant implements OnInit, AfterViewChecked {
 
   readonly renameForm = this.fb.group({
     title: ['', [Validators.required, Validators.maxLength(120)]]
+  });
+
+  readonly ragForm = this.fb.group({
+    query: ['', [Validators.required, Validators.maxLength(2000)]]
   });
 
   private shouldScroll = false;
@@ -437,6 +447,52 @@ export class AiAssistant implements OnInit, AfterViewChecked {
         },
         error: () => this.toastService.error('Failed to delete conversation')
       });
+  }
+
+  // ── Phase 9 — RAG ─────────────────────────────────────────────────────────
+
+  toggleRagPanel(): void {
+    this.ragPanelOpen.update(v => !v);
+    if (!this.ragPanelOpen()) {
+      this.ragResponse.set(null);
+      this.ragForm.reset();
+    }
+  }
+
+  askRag(): void {
+    if (this.ragForm.invalid || this.ragLoading()) {
+      this.ragForm.markAllAsTouched();
+      return;
+    }
+
+    const query = (this.ragForm.value.query ?? '').trim();
+    if (!query) return;
+
+    this.ragLoading.set(true);
+    this.ragResponse.set(null);
+
+    this.aiService.askRag({ query })
+      .pipe(finalize(() => this.ragLoading.set(false)))
+      .subscribe({
+        next: response => this.ragResponse.set(response),
+        error: err => {
+          const status = Number(err?.status ?? 0);
+          if (status === 0) {
+            this.toastService.error('Unable to reach AI service. Check your connection.');
+          } else if (status === 429) {
+            this.toastService.error('AI rate limit reached. Please wait and try again.');
+          } else {
+            this.toastService.error('RAG query failed. Please try again shortly.');
+          }
+        }
+      });
+  }
+
+  onRagKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.askRag();
+    }
   }
 
   renderMessage(content: string): string {

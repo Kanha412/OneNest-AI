@@ -187,6 +187,22 @@ public class EmbeddingRepository : IEmbeddingRepository
         return results;
     }
 
+    // ── Count ─────────────────────────────────────────────────────────────────
+
+    public async Task<int> CountByUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var cmd = await OpenCommandAsync(cancellationToken);
+        cmd.CommandText = """
+            SELECT COUNT(*)::int FROM "EmbeddingRecords" WHERE "UserId" = @userId;
+            """;
+        cmd.Parameters.AddWithValue("userId", userId);
+
+        var result = await cmd.ExecuteScalarAsync(cancellationToken);
+        return result is int n ? n : 0;
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /// <summary>

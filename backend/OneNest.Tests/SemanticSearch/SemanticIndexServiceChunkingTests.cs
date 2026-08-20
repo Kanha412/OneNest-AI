@@ -30,7 +30,8 @@ public class SemanticIndexServiceChunkingTests
         Mock<IEmbeddingProvider>   embMock,
         Mock<IEmbeddingRepository> repoMock,
         Mock<ITextChunker>         chunkerMock) =>
-        new(embMock.Object, repoMock.Object, chunkerMock.Object);
+        new(embMock.Object, repoMock.Object, chunkerMock.Object,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<SemanticIndexService>.Instance);
 
     /// <summary>Chunker that returns N fixed chunks regardless of input.</summary>
     private static Mock<ITextChunker> ChunkerWithN(int n)

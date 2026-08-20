@@ -8,22 +8,6 @@ public class UpdateSettingsRequest
     [MaxLength(120)]
     public string DisplayName { get; set; } = string.Empty;
 
-    public bool EnableWorkspaceContext { get; set; } = true;
-
-    [Required]
-    [RegularExpression("^(low|medium|high)$")]
-    public string ContextDepth { get; set; } = "medium";
-
-    [Required]
-    [RegularExpression("^(workspace|general)$")]
-    public string DefaultConversationMode { get; set; } = "workspace";
-
-    [Required]
-    [RegularExpression("^(short|balanced|detailed)$")]
-    public string ResponseStyle { get; set; } = "balanced";
-
-    public bool EnableSmartSuggestions { get; set; } = true;
-
     public bool EnableAppointmentReminders { get; set; } = true;
 
     public bool EnableMedicineReminders { get; set; } = true;

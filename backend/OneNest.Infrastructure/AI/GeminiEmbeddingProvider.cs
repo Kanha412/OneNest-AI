@@ -62,6 +62,7 @@ public sealed class GeminiEmbeddingProvider : IEmbeddingProvider
 
         return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
     }
+    private readonly HttpClient                        _instanceClient;
     private readonly AIOptions                        _aiOptions;
     private readonly EmbeddingOptions                 _embeddingOptions;
     private readonly ILogger<GeminiEmbeddingProvider> _logger;
@@ -70,11 +71,31 @@ public sealed class GeminiEmbeddingProvider : IEmbeddingProvider
     private static readonly JsonSerializerOptions SerializerOptions =
         new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
+    /// <summary>
+    /// Production constructor — DI-friendly.
+    /// Uses the shared static <see cref="_httpClient"/> built with the correct
+    /// proxy/TLS settings for the current environment.
+    /// </summary>
     public GeminiEmbeddingProvider(
         IOptions<AIOptions>              aiOptions,
         IOptions<EmbeddingOptions>       embeddingOptions,
         ILogger<GeminiEmbeddingProvider> logger)
+        : this(null, aiOptions, embeddingOptions, logger)
     {
+    }
+
+    /// <summary>
+    /// Testing constructor — allows a fake <see cref="HttpClient"/> to be
+    /// injected so that HTTP responses can be controlled in unit tests without
+    /// making real network calls.
+    /// </summary>
+    public GeminiEmbeddingProvider(
+        HttpClient?                      httpClient,
+        IOptions<AIOptions>              aiOptions,
+        IOptions<EmbeddingOptions>       embeddingOptions,
+        ILogger<GeminiEmbeddingProvider> logger)
+    {
+        _instanceClient   = httpClient ?? _httpClient;
         _aiOptions        = aiOptions.Value;
         _embeddingOptions = embeddingOptions.Value;
         _logger           = logger;
@@ -112,7 +133,7 @@ public sealed class GeminiEmbeddingProvider : IEmbeddingProvider
                 outputDimensionality = _embeddingOptions.Dimension   // 768 from config
             };
 
-            using var response = await _httpClient.PostAsJsonAsync(
+            using var response = await _instanceClient.PostAsJsonAsync(
                 url, payload, SerializerOptions, cancellationToken);
 
             if (!response.IsSuccessStatusCode)

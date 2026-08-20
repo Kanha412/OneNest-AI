@@ -95,6 +95,63 @@
         }
       </div>
 
+      <!-- ── Phase 9 — RAG Panel ──────────────────────────────────────────── -->
+      <div class="rag-toggle-bar">
+        <button
+          type="button"
+          class="rag-toggle-btn"
+          [class.active]="ragPanelOpen()"
+          (click)="toggleRagPanel()">
+          🔍 Ask Your Content
+        </button>
+        <span class="rag-hint">Semantic search across your notes & documents</span>
+      </div>
+
+      @if (ragPanelOpen()) {
+        <div class="rag-panel">
+          <form [formGroup]="ragForm" (ngSubmit)="askRag()" class="rag-form">
+            <input
+              formControlName="query"
+              type="text"
+              class="rag-input"
+              placeholder="E.g. 'What did I note about the project budget?'"
+              [disabled]="ragLoading()"
+              (keydown)="onRagKeyDown($event)" />
+            <button
+              type="submit"
+              class="rag-submit-btn"
+              [disabled]="ragForm.invalid || ragLoading()"
+              aria-label="Ask">
+              @if (ragLoading()) {
+                <app-spinner />
+              } @else {
+                ↗
+              }
+            </button>
+          </form>
+
+          @if (ragResponse()) {
+            <div class="rag-result">
+              <div class="rag-answer" [innerHTML]="renderMessage(ragResponse()!.answer)"></div>
+
+              @if (ragResponse()!.hasSources && ragResponse()!.sources.length) {
+                <div class="rag-sources">
+                  <span class="rag-sources-label">📚 Sources used:</span>
+                  <div class="rag-source-chips">
+                    @for (source of ragResponse()!.sources; track source.title + source.chunkIndex) {
+                      <span class="rag-source-chip">
+                        {{ source.sourceType === 'Note' ? '📝' : '📄' }} {{ source.title }}
+                      </span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+      <!-- ── /RAG Panel ──────────────────────────────────────────────────── -->
+
       <div class="history" #historyContainer>
         @if (isConversationLoading()) {
           <app-spinner message="Loading conversation..." />

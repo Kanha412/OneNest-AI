@@ -155,9 +155,7 @@ public class AIConversationService : IAIConversationService
             return false;
         }
 
-        conversation.IsDeleted = true;
-        conversation.UpdatedAt = DateTime.UtcNow;
-        await _conversationRepository.UpdateConversationAsync(conversation);
+        await _conversationRepository.DeleteConversationAsync(conversation);
         return true;
     }
 

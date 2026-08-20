@@ -32,10 +32,16 @@ namespace OneNest.Application.Services;
 public sealed class TextChunker : ITextChunker
 {
     // Split AFTER sentence-ending punctuation followed by whitespace,
-    // OR at paragraph breaks (two or more newlines).
-    // The lookbehind keeps the punctuation attached to the preceding segment.
+    // OR at any line break (single or multiple newlines).
+    //
+    // WHY single newlines: PDF-extracted text uses \n between every logical
+    // line (bullet points, section headers, contact info, job titles).
+    // The original \n{2+} pattern treated these as one giant segment, causing
+    // HardSplitByWords to receive the entire document as a single piece.
+    // Single-\n splitting correctly breaks a resume into sentence/line-size
+    // segments so the chunker can pack them into properly-sized chunks.
     private static readonly Regex SegmentSplitter = new(
-        @"(?<=[.!?])\s+|\n{2,}",
+        @"(?<=[.!?])\s+|\n+",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex MultiNewline = new(
@@ -145,10 +151,15 @@ public sealed class TextChunker : ITextChunker
     /// <summary>
     /// Splits a single over-long string at word boundaries.
     /// Each yielded fragment is ≤ <paramref name="maxChars"/> characters.
+    ///
+    /// Splits on <em>any whitespace</em> (space, tab, newline) so that
+    /// PDF-extracted text — which uses \n as a word separator — is chunked
+    /// correctly instead of being returned as a single oversized string.
     /// </summary>
     private static IEnumerable<string> HardSplitByWords(string text, int maxChars)
     {
-        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        // null separator → split on all whitespace characters (space, \t, \n, \r, …)
+        var words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
         var sb    = new StringBuilder();
 
         foreach (var word in words)

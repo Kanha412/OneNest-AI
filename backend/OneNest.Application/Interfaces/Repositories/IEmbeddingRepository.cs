@@ -50,4 +50,10 @@ public interface IEmbeddingRepository
         float[] queryVector,
         int topK,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the total number of embedding rows owned by the user.
+    /// Used by the status endpoint to show backfill progress.
+    /// </summary>
+    Task<int> CountByUserAsync(Guid userId, CancellationToken cancellationToken = default);
 }

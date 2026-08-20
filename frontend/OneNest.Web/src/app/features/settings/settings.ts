@@ -13,8 +13,6 @@ import { ConfirmService } from '../../shared/confirm/confirm.service';
 import {
   SettingsResponse,
   UpdateSettingsRequest,
-  ContextDepth,
-  ResponseStyle,
   HeightUnit,
   WeightUnit,
   ThemeMode
@@ -25,7 +23,6 @@ import { Spinner } from '../../shared/spinner/spinner';
 
 type SectionId =
   | 'account'
-  | 'ai'
   | 'documents'
   | 'health'
   | 'privacy'
@@ -61,7 +58,6 @@ export class Settings implements OnInit {
 
   readonly sections: { id: SectionId; label: string; icon: string }[] = [
     { id: 'account', label: 'Account', icon: '👤' },
-    { id: 'ai', label: 'AI Preferences', icon: '🤖' },
     { id: 'documents', label: 'Storage', icon: '🗄️' },
     { id: 'health', label: 'Measurements', icon: '📏' },
     { id: 'privacy', label: 'Security', icon: '🔐' },
@@ -75,8 +71,6 @@ export class Settings implements OnInit {
 
   readonly form = this.fb.group({
     displayName: ['', [Validators.required, Validators.maxLength(120)]],
-    contextDepth: ['medium' as ContextDepth, Validators.required],
-    responseStyle: ['balanced' as ResponseStyle, Validators.required],
     enableAppointmentReminders: [true],
     enableMedicineReminders: [true],
     enableTaskReminders: [true],
@@ -141,11 +135,6 @@ export class Settings implements OnInit {
 
     const request: UpdateSettingsRequest = {
       displayName: (this.form.value.displayName ?? '').trim(),
-      enableWorkspaceContext: currentSettings?.aiPreferences.enableWorkspaceContext ?? true,
-      contextDepth: this.form.value.contextDepth ?? 'medium',
-      defaultConversationMode: currentSettings?.aiPreferences.defaultConversationMode ?? 'workspace',
-      responseStyle: this.form.value.responseStyle ?? 'balanced',
-      enableSmartSuggestions: currentSettings?.aiPreferences.enableSmartSuggestions ?? true,
       enableAppointmentReminders: !!this.form.value.enableAppointmentReminders,
       enableMedicineReminders: !!this.form.value.enableMedicineReminders,
       enableTaskReminders: !!this.form.value.enableTaskReminders,
@@ -426,8 +415,6 @@ export class Settings implements OnInit {
   private patchForm(value: SettingsResponse): void {
     this.form.patchValue({
       displayName: value.account.displayName,
-      contextDepth: value.aiPreferences.contextDepth,
-      responseStyle: value.aiPreferences.responseStyle,
       enableAppointmentReminders: value.notifications.enableAppointmentReminders,
       enableMedicineReminders: value.notifications.enableMedicineReminders,
       enableTaskReminders: value.notifications.enableTaskReminders,

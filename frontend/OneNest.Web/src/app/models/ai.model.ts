@@ -57,3 +57,27 @@ export interface ConversationResponse {
   isArchived: boolean;
   messages: ChatMessageResponse[];
 }
+
+// ── Phase 9 — RAG models ──────────────────────────────────────────────────────
+
+export interface RagSource {
+  /** "Note" or "Document" */
+  sourceType: string;
+  title: string;
+  chunkIndex: number;
+}
+
+export interface RagRequest {
+  query: string;
+  topK?: number;
+  similarityThreshold?: number;
+  conversationMessages?: ConversationMessage[];
+}
+
+export interface RagResponse {
+  answer: string;
+  sources: RagSource[];
+  hasSources: boolean;
+  model: string;
+  timestamp: string;
+}
