@@ -5,6 +5,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <!-- NU1903: SQLitePCLRaw.lib.e_sqlite3 2.1.11 vulnerability.
+         This package is pulled in transitively by coverlet.collector (code coverage).
+         It is NOT used in production code paths; only the test runner loads it.
+         Suppressed here only -- production projects are unaffected. -->
+    <NoWarn>NU1903</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

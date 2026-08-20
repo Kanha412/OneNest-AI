@@ -1,587 +1,340 @@
-# OneNest AI API Reference
+# OneNest AI — API Reference
 
-This document describes the current backend HTTP API implemented in `backend/OneNest.API`.
+All endpoints live under the base URL `/api`. Every protected endpoint requires an `Authorization: Bearer <token>` header.
 
-> Scope rule: this file documents only endpoints and contracts that currently exist in code.
-
-## Overview
-
-- **Framework:** ASP.NET Core Web API
-- **Auth:** JWT Bearer (`Authorization: Bearer <token>`)
-- **Default route pattern:** `api/[controller]` (except `health-hub`)
-- **Interactive docs in development:** Swagger/OpenAPI is enabled in Development environment.
-
-## Authentication Flow
-
-```mermaid
-sequenceDiagram
-  participant C as Client (Angular)
-  participant A as Auth API
-  participant P as Protected API
-
-  C->>A: POST /api/auth/register or /api/auth/login
-  A-->>C: AuthResponse { token, expiresAt, user info }
-  C->>C: Store token
-  C->>P: Request with Authorization: Bearer <token>
-  P-->>C: Protected resource response
-  P-->>C: 401 if token invalid/expired
-```
-
-### JWT Configuration (current behavior)
-
-- Token validation enforces:
-  - issuer
-  - audience
-  - lifetime
-  - signature key
-- Claims include:
-  - `sub` (user id)
-  - `nameidentifier` (user id)
-  - `email`
-  - `jti`
-
-## Global Status Code Patterns
-
-| Code | Meaning in OneNest API |
-|---|---|
-| `200 OK` | Successful read/write operation |
-| `201 Created` | Resource created (used by selected endpoints) |
-| `204 No Content` | Successful operation with no body (delete/toggle/archive; medical record empty) |
-| `400 Bad Request` | Validation/domain rule failure (`InvalidOperationException`, `AuthException` mapping) |
-| `401 Unauthorized` | Login failure, or missing/invalid bearer token |
-| `404 Not Found` | Resource not found for current user |
-| `409 Conflict` | Registration conflict (duplicate email) |
-| `429 Too Many Requests` | AI rate-limit scenario (mapped from service exception text) |
+For the full interactive docs when running locally, open Swagger at `https://localhost:5001/swagger`.
 
 ---
 
-## DTO Catalog
+## Authentication
 
-## Auth DTOs
+When you register or log in, you get back an `AuthResponse` with a JWT token. Store it in localStorage (`onenest.token`) and send it with every request using the `Authorization: Bearer` header. Tokens expire after 7 days.
 
-### `RegisterRequest`
+---
 
-| Field | Type | Validation |
+## HTTP Status Codes
+
+| Code | What it means |
+|---|---|
+| `200` | Success |
+| `201` | Created (used by some endpoints) |
+| `204` | Success but no body (deletes, toggles) |
+| `400` | Bad request — validation failed or business rule broken |
+| `401` | Not logged in, or wrong password |
+| `404` | Item not found (or doesn't belong to you) |
+| `409` | Conflict — email already registered |
+| `429` | AI rate limit hit (Gemini quota exceeded) |
+
+---
+
+## DTOs
+
+### Auth
+
+**RegisterRequest**
+
+| Field | Type | Rules |
 |---|---|---|
-| `fullName` | string | required, length 2-100 |
+| `fullName` | string | required, 2–100 chars |
 | `email` | string | required, valid email |
-| `password` | string | required, length 6-100 |
+| `password` | string | required, 6–100 chars |
 
-### `LoginRequest`
+**LoginRequest**
 
-| Field | Type | Validation |
+| Field | Type | Rules |
 |---|---|---|
-| `email` | string | required, valid email |
+| `email` | string | required |
 | `password` | string | required |
 
-### `AuthResponse`
+**AuthResponse** (returned on register and login)
 
 | Field | Type |
 |---|---|
 | `userId` | guid |
 | `fullName` | string |
 | `email` | string |
-| `token` | string |
+| `token` | string (JWT) |
 | `expiresAt` | datetime (UTC) |
 
-### `ChangePasswordRequest`
+**ChangePasswordRequest** — `currentPassword`, `newPassword`, `confirmPassword` (must match)
 
-| Field | Type | Validation |
-|---|---|---|
-| `currentPassword` | string | required |
-| `newPassword` | string | required, length 6-100 |
-| `confirmPassword` | string | required, must match `newPassword` |
+**DeleteAccountRequest** — `password` (confirmation required)
 
-### `DeleteAccountRequest`
+---
 
-| Field | Type | Validation |
-|---|---|---|
-| `password` | string | required |
+### Notes
 
-## AI DTOs
+- **CreateNoteRequest / UpdateNoteRequest** — `title`, `content`
+- **NoteResponse** — `id`, `title`, `content`, `createdAt`, `updatedAt`, `isPinned`, `isArchived`
 
-### Requests
+### Tasks
 
-- `CreateConversationRequest`
-  - `title?: string`
-- `RenameConversationRequest`
-  - `title: string` (required, max 120)
-- `SendMessageRequest`
-  - `message: string` (required, max 8000)
-- `ChatRequest`
-  - `message: string` (required, max 4000)
+- **CreateTaskRequest / UpdateTaskRequest** — `title` (max 100), `description` (max 1000), `dueDate?`, `priority` (1=Low, 2=Medium, 3=High)
+- **TaskResponse** — above fields + `isCompleted`, `completedAt`
 
-### Responses
+### Expenses
 
-#### `ConversationListResponse`
+- **CreateExpenseRequest / UpdateExpenseRequest** — `title` (max 100), `amount` (>0), `category`, `transactionType` (1=Income, 2=Expense), `date`, `notes` (max 1000)
+- **ExpenseResponse** — all request fields + `id`, `createdAt`, `updatedAt`
+- **ExpenseSummaryResponse** — `totalIncome`, `totalExpense`, `currentBalance`, `thisMonthIncome`, `thisMonthExpense`, `topExpenseCategory`, `recentTransactions`, `categoryBreakdown`, `monthlyBreakdown`
 
-| Field | Type |
-|---|---|
-| `id` | guid |
-| `title` | string |
-| `lastMessageAt` | datetime |
-| `createdAt` | datetime |
-| `isArchived` | bool |
+### Documents
 
-#### `ConversationResponse`
+- **CreateDocumentRequest / UpdateDocumentRequest** — `title` (max 150), `category` (1=Resume, 2=Certificate, 3=Identity, 4=Medical, 5=Invoice, 6=Finance, 7=Education, 8=Personal, 9=Other), `description` (max 1000)
+- **DocumentResponse** — `id`, `title`, `originalFileName`, `contentType`, `fileSize`, `category`, `description`, `createdAt`, `updatedAt`
+- **DocumentSummaryResponse** — `totalDocuments`, `todayUploads`, `storageUsed`, `recentDocuments`, `categoryDistribution`
 
-| Field | Type |
-|---|---|
-| `id` | guid |
-| `title` | string |
-| `createdAt` | datetime |
-| `updatedAt` | datetime? |
-| `lastMessageAt` | datetime |
-| `isArchived` | bool |
-| `messages` | `ChatMessageResponse[]` |
+### Health — Medicines
 
-#### `ChatMessageResponse`
+- **CreateMedicineRequest / UpdateMedicineRequest** — `name` (max 150), `dosage`, `frequency`, `morning`/`afternoon`/`night` (bool), `startDate`, `endDate?`, `instructions`, `foodTiming` (1=BeforeFood, 2=AfterFood, 3=Anytime), `isActive`
+- **MedicineResponse** — above + `id`, `createdAt`, `updatedAt`
 
-| Field | Type |
-|---|---|
-| `id` | guid |
-| `role` | string (`user`/`assistant`) |
-| `content` | string |
-| `timestamp` | datetime |
-| `isError` | bool |
-| `usedWorkspaceData` | bool |
-| `responseMode` | string |
-| `workspaceToolsUsed` | string[] |
+### Health — Appointments
 
-#### `ChatResponse`
+- **CreateAppointmentRequest / UpdateAppointmentRequest** — `doctorName` (max 150), `hospital`, `specialty`, `date`, `time`, `notes`, `status` (1=Scheduled, 2=Completed, 3=Cancelled)
+- **AppointmentResponse** — above + `id`, `createdAt`, `updatedAt`
 
-| Field | Type |
-|---|---|
-| `response` | string |
-| `model` | string |
-| `timestamp` | datetime |
-| `usedWorkspaceData` | bool |
-| `responseMode` | string |
-| `workspaceToolsUsed` | string[] |
+### Health — Medical Record
 
-## Notes DTOs
+- **SaveMedicalRecordRequest** — `bloodGroup`, `heightCm` (0–300), `weightKg` (0–500), `allergies`, `existingConditions`, `emergencyContactName`, `emergencyContactPhone`
+- **MedicalRecordResponse** — above + `id`, `createdAt`, `updatedAt`
 
-- `CreateNoteRequest`: `title`, `content`
-- `UpdateNoteRequest`: `title`, `content`
-- `NoteResponse`: `id`, `title`, `content`, `createdAt`, `updatedAt`, `isPinned`, `isArchived`
+### Health — Medical Reports
 
-## Tasks DTOs
-
-- `CreateTaskRequest` / `UpdateTaskRequest`
-  - `title` (required, max 100)
-  - `description` (required, max 1000)
-  - `dueDate?: date`
-  - `priority` (`1=Low`, `2=Medium`, `3=High`)
-- `TaskResponse`
-  - `id`, `title`, `description`, `dueDate`, `priority`, `isCompleted`, `createdAt`, `updatedAt`, `completedAt`
-
-## Expenses DTOs
-
-- `CreateExpenseRequest` / `UpdateExpenseRequest`
-  - `title` (required, max 100)
-  - `amount` (> 0)
-  - `category` (enum)
-  - `transactionType` (`1=Income`, `2=Expense`)
-  - `date` (required)
-  - `notes` (max 1000)
-- `ExpenseResponse`
-  - `id`, `title`, `amount`, `category`, `transactionType`, `date`, `notes`, `createdAt`, `updatedAt`
-- `ExpenseSummaryResponse`
-  - `totalIncome`, `totalExpense`, `currentBalance`, `thisMonthIncome`, `thisMonthExpense`, `topExpenseCategory`, `recentTransactions`, `categoryBreakdown`, `monthlyBreakdown`
-
-## Documents DTOs
-
-- `CreateDocumentRequest` / `UpdateDocumentRequest`
-  - `title` (required, max 150)
-  - `category` (`1=Resume,2=Certificate,3=Identity,4=Medical,5=Invoice,6=Finance,7=Education,8=Personal,9=Other`)
-  - `description` (max 1000)
-- `DocumentResponse`
-  - `id`, `title`, `originalFileName`, `contentType`, `fileSize`, `category`, `description`, `createdAt`, `updatedAt`
-- `DocumentSummaryResponse`
-  - `totalDocuments`, `todayUploads`, `storageUsed`, `recentDocuments`, `categoryDistribution`
-
-## Health DTOs
-
-### Medicines
-
-- `CreateMedicineRequest` / `UpdateMedicineRequest`
-  - `name` (required, max 150)
-  - `dosage` (max 100)
-  - `frequency` (max 100)
-  - `morning`, `afternoon`, `night` (bool)
-  - `startDate` (required)
-  - `endDate?`
-  - `instructions` (max 1000)
-  - `foodTiming` (`1=BeforeFood,2=AfterFood,3=Anytime`)
-  - `isActive` (bool)
-- `MedicineResponse`
-  - plus metadata: `id`, `createdAt`, `updatedAt`
-
-### Appointments
-
-- `CreateAppointmentRequest` / `UpdateAppointmentRequest`
-  - `doctorName` (required, max 150)
-  - `hospital` (max 150)
-  - `specialty` (max 100)
-  - `date` (required)
-  - `time` (required)
-  - `notes` (max 1000)
-  - `status` (`1=Scheduled,2=Completed,3=Cancelled`)
-- `AppointmentResponse`
-  - request fields + `id`, `createdAt`, `updatedAt`
-
-### Medical Record
-
-- `SaveMedicalRecordRequest`
-  - `bloodGroup` (max 10)
-  - `heightCm` (0-300)
-  - `weightKg` (0-500)
-  - `allergies`, `existingConditions` (max 1000)
-  - `emergencyContactName` (max 150)
-  - `emergencyContactPhone` (max 30)
-- `MedicalRecordResponse`
-  - request fields + `id`, `createdAt`, `updatedAt`
-
-### Medical Reports
-
-- `CreateMedicalReportRequest` / `UpdateMedicalReportRequest`
-  - `title` (required, max 150)
-  - `category` (`1=LabReport,2=Prescription,3=Scan,4=DischargeSummary,5=Other`)
-  - `doctorName` (max 150)
-  - `hospital` (max 150)
-  - `reportDate`
-  - `description` (max 1000)
-- `MedicalReportResponse`
-  - metadata + file metadata (`originalFileName`, `contentType`, `fileSize`)
+- **CreateMedicalReportRequest / UpdateMedicalReportRequest** — `title` (max 150), `category` (1=LabReport, 2=Prescription, 3=Scan, 4=DischargeSummary, 5=Other), `doctorName`, `hospital`, `reportDate`, `description`
+- **MedicalReportResponse** — above + file metadata (`originalFileName`, `contentType`, `fileSize`)
 
 ### Health Summary
 
-- `HealthSummaryResponse`
-  - KPI counts (`activeMedicines`, `todayMedicines`, `expiringSoonMedicines`, `upcomingAppointments`, `pastAppointments`, `totalReports`)
-  - `lastRecordUpdate`
-  - `medicineDistribution`, `appointmentTimeline`, `recentReports`, `upcomingAppointmentsList`
+- **HealthSummaryResponse** — KPI counts (`activeMedicines`, `todayMedicines`, `expiringSoonMedicines`, `upcomingAppointments`, `pastAppointments`, `totalReports`), `lastRecordUpdate`, `medicineDistribution`, `appointmentTimeline`, `recentReports`, `upcomingAppointmentsList`
 
-## Semantic Search DTOs
+### AI Conversations
 
-### `SemanticSearchRequest`
+**Requests**
+- `CreateConversationRequest` — `title?` (optional)
+- `RenameConversationRequest` — `title` (required, max 120)
+- `SendMessageRequest` — `message` (required, max 8000)
 
-| Field | Type | Description |
+**ConversationListResponse** — `id`, `title`, `lastMessageAt`, `createdAt`, `isArchived`
+
+**ConversationResponse** — above + `messages: ChatMessageResponse[]`
+
+**ChatMessageResponse** — `id`, `role` (user/assistant), `content`, `timestamp`, `isError`, `usedWorkspaceData`, `responseMode`, `workspaceToolsUsed`
+
+**ChatResponse** — `response`, `model`, `timestamp`, `usedWorkspaceData`, `responseMode`, `workspaceToolsUsed`
+
+### Semantic Search
+
+**SemanticSearchRequest**
+
+| Field | Type | Notes |
 |---|---|---|
-| `query` | string | Natural-language query to embed and compare against the index |
-| `topK` | int | Max results to return (1–20, default 5) |
-| `sourceType` | int? | Optional filter: `0` = Note, `1` = Document. Omit to search all types |
+| `query` | string | Plain English question |
+| `topK` | int | How many results (1–20, default 5) |
+| `sourceType` | int? | Filter: 0=Note, 1=Document, omit for all |
 
-### `SemanticSearchResult`
+**SemanticSearchResult** — `sourceId`, `sourceType`, `title`, `score` (0–1, higher = more relevant)
 
-| Field | Type | Description |
-|---|---|---|
-| `sourceId` | guid | PK of the source entity (Note.Id or Document.Id) |
-| `sourceType` | int | `0` = Note, `1` = Document |
-| `title` | string | Human-readable label of the matched item |
-| `score` | double | Cosine similarity ∈ [0, 1]; higher = more relevant |
+**BackfillResult** — `notesIndexed`, `documentsIndexed`, `skipped`, `errors`
 
-### `BackfillResult`
+### Settings
 
-| Field | Type | Description |
-|---|---|---|
-| `notesIndexed` | int | Notes successfully embedded during backfill |
-| `documentsIndexed` | int | Documents successfully embedded during backfill |
-| `skipped` | int | Items skipped (no extractable text) |
-| `errors` | int | Items that failed to index |
+**SettingsResponse** — nested sections: `account`, `aiPreferences`, `notifications`, `documents`, `health`, `appearance`, `privacy`, `about`
 
-## Settings DTOs
-
-### `SettingsResponse`
-
-Nested sections returned by `GET /api/settings`:
-
-- `account`
-- `aiPreferences`
-- `notifications`
-- `documents`
-- `health`
-- `appearance`
-- `privacy`
-- `about`
-
-### `UpdateSettingsRequest`
-
-Current request shape includes:
-
-- Account/profile: `displayName`
-- AI: `enableWorkspaceContext`, `contextDepth`, `defaultConversationMode`, `responseStyle`, `enableSmartSuggestions`
-- Notifications toggles
-- Documents: `autoDeleteTrashDays`
-- Health: unit defaults and reminder lead time
-- Appearance: `theme`, `compactSidebar`, `enableAnimations`
+**UpdateSettingsRequest** — `displayName`, AI settings (`enableWorkspaceContext`, `contextDepth`, `defaultConversationMode`, `responseStyle`), health units, appearance theme
 
 ---
 
-## Endpoint Reference
+## Endpoints
 
-Base URL in local development typically follows:
+### Public
 
-```http
-https://localhost:<api-port>
+| Method | Route | Description |
+|---|---|---|
+| GET | `/api/health` | Health check — always returns 200 |
+
+**Response:**
+```json
+{ "status": "Healthy", "application": "OneNest AI", "version": "1.0.0", "timestamp": "..." }
 ```
 
-## Public Endpoint
+---
 
-### Health Check
+### Auth
 
 | Method | Route | Auth | Description |
 |---|---|---|---|
-| GET | `/api/health` | No | Service health payload |
-
-**200 Example**
-
-```json
-{
-  "status": "Healthy",
-  "application": "OneNest AI",
-  "version": "1.0.0",
-  "timestamp": "2026-08-06T12:34:56.0000000+00:00"
-}
-```
-
-## Auth Endpoints
-
-| Method | Route | Auth | Request | Success | Other Statuses |
-|---|---|---|---|---|---|
-| POST | `/api/auth/register` | No | `RegisterRequest` | `200 AuthResponse` | `409` (email exists) |
-| POST | `/api/auth/login` | No | `LoginRequest` | `200 AuthResponse` | `401` (invalid credentials) |
-| POST | `/api/auth/change-password` | Yes | `ChangePasswordRequest` | `200 { message }` | `400` |
-| POST | `/api/auth/delete-account` | Yes | `DeleteAccountRequest` | `200 { message }` | `400` |
-
-## AI Endpoints
-
-| Method | Route | Description | Success | Notable Errors |
-|---|---|---|---|---|
-| GET | `/api/ai/conversations?includeArchived={bool}&search={text}` | List conversations | `200 ConversationListResponse[]` | - |
-| GET | `/api/ai/conversations/{id}` | Get conversation detail | `200 ConversationResponse` | `404` |
-| POST | `/api/ai/conversations` | Create conversation | `200 ConversationResponse` | - |
-| PUT | `/api/ai/conversations/{id}/rename` | Rename conversation | `200 ConversationResponse` | `400`, `404` |
-| DELETE | `/api/ai/conversations/{id}` | Soft-delete conversation | `204` | `404` |
-| POST | `/api/ai/conversations/{id}/archive` | Archive conversation | `204` | `404` |
-| POST | `/api/ai/conversations/{id}/unarchive` | Unarchive conversation | `204` | `404` |
-| POST | `/api/ai/conversations/{id}/messages` | Send message to conversation | `200 ChatResponse` | `400`, `404`, `429` |
-| POST | `/api/ai/chat` | General chat shortcut (creates conversation internally) | `200 ChatResponse` | `400`, `429` |
-
-## Notes Endpoints
-
-| Method | Route | Success | Other |
-|---|---|---|---|
-| GET | `/api/notes` | `200 NoteResponse[]` | - |
-| POST | `/api/notes` | `200 NoteResponse` | - |
-| PUT | `/api/notes/{id}` | `200 NoteResponse` | `404` |
-| PATCH | `/api/notes/{id}/pin` | `204` | - |
-| DELETE | `/api/notes/{id}` | `204` | - |
-
-## Tasks Endpoints
-
-| Method | Route | Success | Other |
-|---|---|---|---|
-| GET | `/api/tasks` | `200 TaskResponse[]` | - |
-| POST | `/api/tasks` | `200 TaskResponse` | - |
-| PUT | `/api/tasks/{id}` | `200 TaskResponse` | `404` |
-| PATCH | `/api/tasks/{id}/complete` | `204` | - |
-| DELETE | `/api/tasks/{id}` | `204` | - |
-
-## Expenses Endpoints
-
-| Method | Route | Success | Other |
-|---|---|---|---|
-| GET | `/api/expenses` | `200 ExpenseResponse[]` | - |
-| GET | `/api/expenses/summary` | `200 ExpenseSummaryResponse` | - |
-| POST | `/api/expenses` | `200 ExpenseResponse` | - |
-| PUT | `/api/expenses/{id}` | `200 ExpenseResponse` | `404` |
-| DELETE | `/api/expenses/{id}` | `204` | `404` |
-
-## Documents Endpoints
-
-| Method | Route | Success | Other |
-|---|---|---|---|
-| GET | `/api/documents?search=&category=` | `200 DocumentResponse[]` | - |
-| GET | `/api/documents/recent?count=5` | `200 DocumentResponse[]` | - |
-| GET | `/api/documents/summary` | `200 DocumentSummaryResponse` | - |
-| GET | `/api/documents/{id}` | `200 DocumentResponse` | `404` |
-| GET | `/api/documents/{id}/download` | File stream | `404` |
-| GET | `/api/documents/{id}/preview` | Inline file stream | `404` |
-| GET | `/api/documents/download-all` | ZIP stream | `404` when empty |
-| POST | `/api/documents` (multipart/form-data) | `200 DocumentResponse` | `400` |
-| PUT | `/api/documents/{id}` | `200 DocumentResponse` | `404` |
-| DELETE | `/api/documents/{id}` | `204` | `404` |
-| DELETE | `/api/documents/all` | `200 { deletedCount }` | - |
-
-## Health Module Endpoints
-
-## Health Summary
-
-| Method | Route | Success |
-|---|---|---|
-| GET | `/api/health-hub/summary` | `200 HealthSummaryResponse` |
-
-## Medicines
-
-| Method | Route | Success | Other |
-|---|---|---|---|
-| GET | `/api/medicines?search=&isActive=` | `200 MedicineResponse[]` | - |
-| GET | `/api/medicines/{id}` | `200 MedicineResponse` | `404` |
-| POST | `/api/medicines` | `201 MedicineResponse` | `400` |
-| PUT | `/api/medicines/{id}` | `200 MedicineResponse` | `400`, `404` |
-| DELETE | `/api/medicines/{id}` | `204` | `404` |
-
-## Appointments
-
-| Method | Route | Success | Other |
-|---|---|---|---|
-| GET | `/api/appointments?search=&status=` | `200 AppointmentResponse[]` | - |
-| GET | `/api/appointments/{id}` | `200 AppointmentResponse` | `404` |
-| POST | `/api/appointments` | `201 AppointmentResponse` | - |
-| PUT | `/api/appointments/{id}` | `200 AppointmentResponse` | `404` |
-| DELETE | `/api/appointments/{id}` | `204` | `404` |
-
-## Medical Record
-
-| Method | Route | Success | Other |
-|---|---|---|---|
-| GET | `/api/medicalrecords` | `200 MedicalRecordResponse` | `204` if no record |
-| PUT | `/api/medicalrecords` | `200 MedicalRecordResponse` | - |
-
-## Medical Reports
-
-| Method | Route | Success | Other |
-|---|---|---|---|
-| GET | `/api/medicalreports?search=&category=` | `200 MedicalReportResponse[]` | - |
-| GET | `/api/medicalreports/{id}` | `200 MedicalReportResponse` | `404` |
-| GET | `/api/medicalreports/{id}/download` | File stream | `404` |
-| GET | `/api/medicalreports/{id}/preview` | Inline file stream | `404` |
-| POST | `/api/medicalreports` (multipart/form-data) | `200 MedicalReportResponse` | `400` |
-| PUT | `/api/medicalreports/{id}` | `200 MedicalReportResponse` | `404` |
-| DELETE | `/api/medicalreports/{id}` | `204` | `404` |
-
-## Semantic Search Endpoints
-
-| Method | Route | Auth | Description | Success | Other |
-|---|---|---|---|---|---|
-| POST | `/api/semantic-search` | Yes | Run natural-language similarity search | `200 SemanticSearchResult[]` | `400` (empty query) |
-| POST | `/api/semantic-search/backfill` | Yes | Re-index all notes and documents for the authenticated user | `200 BackfillResult` | - |
-
-**Search example request:**
-```json
-{ "query": "monthly savings and expenses", "topK": 5 }
-```
-
-**Search example response:**
-```json
-[
-  { "sourceId": "...", "sourceType": 0, "title": "Monthly Budget Plan", "score": 0.682 },
-  { "sourceId": "...", "sourceType": 1, "title": "Q1 Finance Report.pdf", "score": 0.601 }
-]
-```
-
-**Notes:**
-- Search is scoped to the authenticated user — results never cross user boundaries.
-- Indexing is idempotent; calling backfill multiple times is safe.
-- New notes and documents are indexed automatically on create/update; no manual trigger needed.
-
-## Settings Endpoints
-
-| Method | Route | Success | Other |
-|---|---|---|---|
-| GET | `/api/settings` | `200 SettingsResponse` | - |
-| PUT | `/api/settings` | `200 SettingsResponse` | `400` |
+| POST | `/api/auth/register` | No | Register — returns `AuthResponse` (200) or 409 if email taken |
+| POST | `/api/auth/login` | No | Login — returns `AuthResponse` (200) or 401 |
+| POST | `/api/auth/change-password` | Yes | Change password — 200 or 400 |
+| POST | `/api/auth/delete-account` | Yes | Delete account + all data — 200 or 400 |
 
 ---
 
-## Request/Response Examples
+### Notes
 
-## Register
+| Method | Route | Returns |
+|---|---|---|
+| GET | `/api/notes` | `NoteResponse[]` |
+| POST | `/api/notes` | `NoteResponse` |
+| PUT | `/api/notes/{id}` | `NoteResponse` (404 if not yours) |
+| PATCH | `/api/notes/{id}/pin` | 204 |
+| DELETE | `/api/notes/{id}` | 204 |
 
+---
+
+### Tasks
+
+| Method | Route | Returns |
+|---|---|---|
+| GET | `/api/tasks` | `TaskResponse[]` |
+| POST | `/api/tasks` | `TaskResponse` |
+| PUT | `/api/tasks/{id}` | `TaskResponse` |
+| PATCH | `/api/tasks/{id}/complete` | 204 |
+| DELETE | `/api/tasks/{id}` | 204 |
+
+---
+
+### Expenses
+
+| Method | Route | Returns |
+|---|---|---|
+| GET | `/api/expenses` | `ExpenseResponse[]` |
+| GET | `/api/expenses/summary` | `ExpenseSummaryResponse` |
+| POST | `/api/expenses` | `ExpenseResponse` |
+| PUT | `/api/expenses/{id}` | `ExpenseResponse` |
+| DELETE | `/api/expenses/{id}` | 204 |
+
+---
+
+### Documents
+
+| Method | Route | Returns |
+|---|---|---|
+| GET | `/api/documents?search=&category=` | `DocumentResponse[]` |
+| GET | `/api/documents/recent?count=5` | `DocumentResponse[]` |
+| GET | `/api/documents/summary` | `DocumentSummaryResponse` |
+| GET | `/api/documents/{id}` | `DocumentResponse` |
+| GET | `/api/documents/{id}/download` | File stream |
+| GET | `/api/documents/{id}/preview` | Inline file stream |
+| GET | `/api/documents/download-all` | ZIP of all files |
+| POST | `/api/documents` (multipart/form-data) | `DocumentResponse` |
+| PUT | `/api/documents/{id}` | `DocumentResponse` |
+| DELETE | `/api/documents/{id}` | 204 |
+| DELETE | `/api/documents/all` | `{ deletedCount: N }` |
+
+---
+
+### Health
+
+| Method | Route | Returns |
+|---|---|---|
+| GET | `/api/health-hub/summary` | `HealthSummaryResponse` |
+| GET | `/api/medicines?search=&isActive=` | `MedicineResponse[]` |
+| GET | `/api/medicines/{id}` | `MedicineResponse` |
+| POST | `/api/medicines` | `MedicineResponse` (201) |
+| PUT | `/api/medicines/{id}` | `MedicineResponse` |
+| DELETE | `/api/medicines/{id}` | 204 |
+| GET | `/api/appointments?search=&status=` | `AppointmentResponse[]` |
+| GET | `/api/appointments/{id}` | `AppointmentResponse` |
+| POST | `/api/appointments` | `AppointmentResponse` (201) |
+| PUT | `/api/appointments/{id}` | `AppointmentResponse` |
+| DELETE | `/api/appointments/{id}` | 204 |
+| GET | `/api/medicalrecords` | `MedicalRecordResponse` (204 if no record yet) |
+| PUT | `/api/medicalrecords` | `MedicalRecordResponse` |
+| GET | `/api/medicalreports?search=&category=` | `MedicalReportResponse[]` |
+| GET | `/api/medicalreports/{id}` | `MedicalReportResponse` |
+| GET | `/api/medicalreports/{id}/download` | File stream |
+| GET | `/api/medicalreports/{id}/preview` | Inline file stream |
+| POST | `/api/medicalreports` (multipart/form-data) | `MedicalReportResponse` |
+| PUT | `/api/medicalreports/{id}` | `MedicalReportResponse` |
+| DELETE | `/api/medicalreports/{id}` | 204 |
+
+---
+
+### AI Conversations
+
+| Method | Route | Returns |
+|---|---|---|
+| GET | `/api/ai/conversations?includeArchived=&search=` | `ConversationListResponse[]` |
+| GET | `/api/ai/conversations/{id}` | `ConversationResponse` |
+| POST | `/api/ai/conversations` | `ConversationResponse` |
+| PUT | `/api/ai/conversations/{id}/rename` | `ConversationResponse` |
+| DELETE | `/api/ai/conversations/{id}` | 204 (soft delete) |
+| POST | `/api/ai/conversations/{id}/archive` | 204 |
+| POST | `/api/ai/conversations/{id}/unarchive` | 204 |
+| POST | `/api/ai/conversations/{id}/messages` | `ChatResponse` (429 if Gemini rate limited) |
+| POST | `/api/ai/chat` | `ChatResponse` (quick chat, creates a conversation internally) |
+
+---
+
+### Semantic Search
+
+| Method | Route | Returns |
+|---|---|---|
+| POST | `/api/semantic-search` | `SemanticSearchResult[]` (400 if query empty) |
+| POST | `/api/semantic-search/backfill` | `BackfillResult` (re-indexes all user content) |
+
+Example search request:
+```json
+{ "query": "notes about monthly savings", "topK": 5 }
+```
+
+Example response:
+```json
+[
+  { "sourceId": "...", "sourceType": 0, "title": "Monthly Budget", "score": 0.78 },
+  { "sourceId": "...", "sourceType": 1, "title": "Finance Report.pdf", "score": 0.65 }
+]
+```
+
+Search results are always scoped to the logged-in user — you'll never see someone else's content.
+
+---
+
+### Settings
+
+| Method | Route | Returns |
+|---|---|---|
+| GET | `/api/settings` | `SettingsResponse` |
+| PUT | `/api/settings` | `SettingsResponse` |
+
+---
+
+## Request examples
+
+**Register:**
 ```http
 POST /api/auth/register
 Content-Type: application/json
+
+{ "fullName": "Kanha Gupta", "email": "kanha@example.com", "password": "Pass@123" }
 ```
 
-```json
-{
-  "fullName": "Kanha Gupta",
-  "email": "kanha@example.com",
-  "password": "Pass@123"
-}
-```
-
-```json
-{
-  "userId": "c3a9a74e-1c23-4f99-9f99-3c2a6f5cfbaa",
-  "fullName": "Kanha Gupta",
-  "email": "kanha@example.com",
-  "token": "<jwt>",
-  "expiresAt": "2026-08-06T14:50:00Z"
-}
-```
-
-## Send AI Message
-
+**Send AI message:**
 ```http
-POST /api/ai/conversations/{conversationId}/messages
+POST /api/ai/conversations/{id}/messages
 Authorization: Bearer <jwt>
 Content-Type: application/json
+
+{ "message": "What tasks do I have due this week?" }
 ```
 
-```json
-{
-  "message": "Summarize my pending tasks for today"
-}
-```
-
-```json
-{
-  "response": "You have 3 pending tasks today...",
-  "model": "gemini-3.5-flash",
-  "timestamp": "2026-08-06T13:10:44Z",
-  "usedWorkspaceData": true,
-  "responseMode": "workspace",
-  "workspaceToolsUsed": ["tasks"]
-}
-```
-
-## Upload Document (multipart)
-
+**Upload document:**
 ```http
 POST /api/documents
 Authorization: Bearer <jwt>
 Content-Type: multipart/form-data
-```
 
-Form fields:
-- `file` (binary)
-- `title` (string)
-- `category` (int)
-- `description` (string)
-
-## Delete All Documents
-
-```http
-DELETE /api/documents/all
-Authorization: Bearer <jwt>
-```
-
-```json
-{
-  "deletedCount": 12
-}
+file=<binary>, title="Q1 Report", category=6, description="Finance docs"
 ```
 
 ---
 
-## Planned Improvements
+## Things to improve (planned)
 
-> Planned improvements are not fully implemented yet; they are recommendations based on current API shape.
-
-- Add OpenAPI examples per endpoint for all major DTOs.
-- Standardize creation responses to use `201 Created` consistently (currently mixed `200`/`201`).
-- Introduce a consistent error envelope (for example: `code`, `message`, `details`) across all controllers.
-- Add API versioning strategy (`/api/v1/...`) before introducing breaking changes.
-- Add pagination contracts for list-heavy endpoints (`notes`, `tasks`, `documents`, `reports`, `conversations`).
-- Add explicit rate-limit headers for AI endpoints when 429 occurs.
+- Standardize all creation endpoints to return `201 Created` (currently mixed `200`/`201`)
+- Add a consistent error response shape (`{ code, message, details }`) instead of plain strings
+- Add pagination on list endpoints (notes, tasks, documents, conversations)
+- Add API versioning (`/api/v1/`) before making any breaking changes
+- Add proper rate-limit headers on 429 responses

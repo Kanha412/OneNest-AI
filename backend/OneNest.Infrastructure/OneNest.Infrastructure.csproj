@@ -33,6 +33,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- NU1903: SQLitePCLRaw.lib.e_sqlite3 2.1.11 vulnerability.
+         Pulled in transitively by Microsoft.EntityFrameworkCore.Sqlite,
+         which is present for EF Core migration tooling. In production,
+         only Npgsql (PostgreSQL) is used as the active database provider;
+         SQLite is never instantiated at runtime. -->
+    <NoWarn>NU1903</NoWarn>
   </PropertyGroup>
 
 </Project>

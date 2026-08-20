@@ -17,9 +17,10 @@
 # Logs
 *.log
 
-# Environment
+# Environment — ignore all .env files but allow the example template
 .env
 .env.*
+!.env.example
 
 # Secrets / local config
 **/appsettings.Development.json

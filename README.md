@@ -1,501 +1,252 @@
-<div align="center">
+# OneNest AI
 
-# 🏡 OneNest AI
+A personal life management app that brings notes, tasks, expenses, documents, health tracking, and an AI assistant all into one place.
 
-### Your Intelligent Personal Life Management Platform
-
-A modern, AI-powered personal productivity platform that unifies **Notes**, **Tasks**, **Expenses**, **Documents**, **Health Tracking**, and a **Workspace-Aware AI Assistant** into one seamless application.
+Built with **Angular 22** (frontend), **ASP.NET Core .NET 10** (backend), and **PostgreSQL** with vector search.
 
 ![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
 ![Angular](https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?logo=postgresql&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-success)
-![Status](https://img.shields.io/badge/Status-Active-success)
-
-</div>
 
 ---
 
-# 📸 Application Preview
+## Screenshots
 
-## Dashboard
+### Login
+![Login](assets/screenshots/01-login.png)
 
-![Dashboard](assets/screenshots/dashboard.png)
+### Register
+![Register](assets/screenshots/02-register.png)
 
----
+### Dashboard
+![Dashboard](assets/screenshots/03-dashboard.png)
 
-## AI Assistant
+### Notes
+![Notes](assets/screenshots/04-notes.png)
 
-![AI Assistant](assets/screenshots/ai-assistant.png)
+### Tasks
+![Tasks](assets/screenshots/05-tasks.png)
 
----
+### Expenses
+![Expenses](assets/screenshots/06-expenses.png)
 
-## Settings
+### Documents
+![Documents](assets/screenshots/07-documents.png)
 
-![Settings](assets/screenshots/settings.png)
+### Health Hub
+![Health Hub](assets/screenshots/08-health.png)
 
----
+### AI Assistant
+![AI Assistant](assets/screenshots/09-ai-assistant.png)
 
-# ✨ Overview
+### Semantic Search
+![Semantic Search](assets/screenshots/10-semantic-search.png)
 
-OneNest AI is a **full-stack SaaS-inspired personal management platform** designed to centralize everyday productivity.
+### Settings
+![Settings](assets/screenshots/11-settings.png)
 
-Instead of using multiple applications for notes, expenses, health records, appointments, documents, and AI assistance, OneNest provides everything inside one secure workspace.
-
-The application combines a modern Angular frontend, ASP.NET Core backend, PostgreSQL database, and AI-powered contextual assistance to deliver an intelligent personal workspace.
-
----
-
-# 🚀 Current Features
-
-## 🔐 Authentication
-
-- JWT Authentication
-- User Registration
-- Login
-- Change Password
-- Delete Account
-- Protected Routes
+### Admin Panel
+![Admin Panel](assets/screenshots/12-admin.png)
 
 ---
 
-## 📝 Notes
+## What it does
 
-- Create Notes
-- Edit Notes
-- Delete Notes
-- Search Notes
+**Authentication** — Register, log in, change password, delete account. All routes are protected by JWT tokens. Tokens expire after 7 days.
 
----
+**Notes** — Create, edit, delete, pin, archive, and search your notes. Notes are also indexed automatically for semantic search.
 
-## ✅ Tasks
+**Tasks** — Create tasks with a title, due date, and priority (Low / Medium / High). Mark them done, filter by status, and search.
 
-- Task Management
-- Due Dates
-- Completion Tracking
-- Filtering
+**Expenses** — Log income and expenses with a category (Food, Travel, Bills, etc.). See totals and charts on the dashboard.
 
----
+**Documents** — Upload files (PDF, Word, Excel, images, and more). The app extracts the text automatically on upload so the AI can read it. Supports preview, download, bulk ZIP download, and per-user storage quota (150 MB).
 
-## 💰 Expenses
+**Health Hub** — Track medicines (with food timing reminders), book appointments, keep a medical record (height, weight, BMI auto-calculated), and upload health reports.
 
-- Expense Tracking
-- Monthly Summary
-- Category Analytics
-- Dashboard Charts
+**AI Assistant** — A chat interface powered by Google Gemini. The AI automatically pulls in your notes, tasks, expenses, health data, and documents so it can answer questions about your actual life, not just generic facts. Conversations are saved and can be archived.
 
----
+**Semantic Search** — Ask a question in plain English (e.g. "notes about travel plans") and get the most relevant notes and documents back, ranked by meaning — not just keywords. Powered by a local ONNX embedding model (all-MiniLM-L6-v2).
 
-## 📂 Documents
+**RAG (Ask your documents)** — Ask the AI a question and it will search your notes and documents for relevant chunks, then use those as context to give you a grounded answer with source citations.
 
-- Upload Documents
-- Download Documents
-- Preview Files
-- Bulk Download (ZIP)
-- Delete All
-- Storage Summary
-- **AI Text Extraction** (PDF, DOCX, TXT auto-extracted on upload)
-- **Semantic Indexing** (chunks auto-embedded for search)
+**Settings** — Change display name, password, height/weight units (metric/imperial), AI response style, and delete your account.
+
+**Admin Panel** — (Admin role only) View all users, change user roles, and manage contact/support messages. Admins cannot change their own role.
 
 ---
 
-## 🔍 Semantic Search
+## Tech Stack
 
-- Natural-language similarity search across all notes and documents
-- Powered by Google Gemini Embedding API (`gemini-embedding-001`, 768-dim vectors)
-- pgvector cosine similarity (`<=>` operator) on PostgreSQL
-- Per-chunk indexing (1 200-char chunks, 240-char overlap)
-- Source-type filter (Notes / Documents)
-- Backfill endpoint to index pre-existing workspace items
-
----
-
-## 🏥 Health Workspace
-
-- Medicines
-- Appointments
-- Medical Records
-- Medical Reports
-- Dashboard Integration
+| Layer | What's used |
+|---|---|
+| Frontend | Angular 22, TypeScript, Angular Signals, Chart.js |
+| Backend | ASP.NET Core .NET 10, Clean Architecture, EF Core |
+| Database | PostgreSQL (Supabase), pgvector extension |
+| AI Chat | Google Gemini (`gemini-2.5-flash`) |
+| Embeddings | ONNX local model (`all-MiniLM-L6-v2`, 384-dim, ~22 MB, runs in-process) |
+| File Storage | Supabase Storage (private S3 bucket) |
+| Auth | JWT Bearer tokens |
+| Deployment | Render (Docker for backend, static site for frontend) |
 
 ---
 
-## 🤖 AI Assistant
+## Project Structure
 
-- Persistent Conversations
-- Conversation History
-- Conversation Archive
-- Workspace-aware Responses
-- Context Injection
-- Tool Orchestration
-- AI Metadata
-- Smart Conversation Management
-- **AI Document Intelligence** (summarize / Q&A over uploaded documents)
-
----
-
-## ⚙ Settings
-
-- Account Settings
-- AI Preferences
-- Documents
-- Health Preferences
-- Privacy & Security
-- About
-
----
-
-# 🧠 AI Architecture
-
-OneNest AI doesn't simply send prompts to an LLM.
-
-Instead, it intelligently determines whether the user's question requires workspace data before generating a response.
-
-```text
-                    User
-
-                      │
-
-                      ▼
-
-             AI Conversation Service
-
-                      │
-
-                      ▼
-
-          Workspace Tool Orchestrator
-
-       ┌────────┬─────────┬─────────┬──────────┬─────────┐
-       │ Notes  │ Tasks   │Expenses │Documents │ Health  │
-       └────────┴─────────┴─────────┴──────────┴─────────┘
-
-                      │
-
-             Workspace Context
-
-                      │
-
-                      ▼
-
-               AI Model (Gemini)
-
-                      │
-
-                      ▼
-
-             Intelligent Response
-
-                      │
-
-                      ▼
-
-      Conversation Stored + Metadata
 ```
-
-## 🔍 Semantic Search Architecture
-
-Every time a note or document is created or updated, it is silently chunked and embedded in the background — CRUD operations are never blocked.
-
-```text
-  Note / Document (create / update)
-             │
-             ▼
-      SemanticIndexService           ← best-effort, never throws
-             │
-       TextChunker                   ← 1 200-char chunks, 240-char overlap
-             │
-     GeminiEmbeddingProvider         ← gemini-embedding-001, 768 dims
-             │
-      EmbeddingRepository            ← upsert into EmbeddingRecords (pgvector)
-             │
-      PostgreSQL vector(768)
-
-  Semantic Search query
-             │
-             ▼
-  Embed query → cosine similarity (<=>)
-  → ranked results with Score ∈ [0, 1]
+OneNest-AI/
+├── backend/
+│   ├── OneNest.API           → controllers, middleware, Program.cs
+│   ├── OneNest.Application   → service interfaces, DTOs
+│   ├── OneNest.Domain        → entities, enums (no external deps)
+│   └── OneNest.Infrastructure → EF Core, Gemini, ONNX, Supabase Storage
+│
+├── frontend/
+│   └── OneNest.Web           → Angular app
+│
+├── assets/
+│   └── screenshots/          → app screenshots for this README
+│
+├── docs/                     → deployment and architecture docs
+├── database/                 → migration scripts
+└── OneNest-Documentation/    → BRD and architecture diagrams (PDF)
 ```
 
 ---
 
-# 🏗 Technology Stack
+## Running locally
 
-## Frontend
-
-- Angular
-- TypeScript
-- RxJS
-- Angular Signals
-- Reactive Forms
-- Chart.js
-
----
-
-## Backend
-
-- ASP.NET Core Web API
-- .NET 10
-- Entity Framework Core
-- Repository Pattern
-- Clean Architecture
-- JWT Authentication
-
----
-
-## Database
-
-- PostgreSQL
-- **pgvector** (vector similarity search extension)
-- Supabase (hosted PostgreSQL)
-
----
-
-## AI
-
-- Gemini API (`gemini-3.5-flash` for chat, `gemini-embedding-001` for embeddings)
-- Workspace Tool Orchestrator
-- Persistent Conversation Memory
-- AI Context Injection
-- **Semantic Search** (768-dim embeddings, cosine similarity)
-- **AI Document Intelligence** (text extraction from PDF/DOCX/TXT)
-
----
-
-# 🏛 Project Architecture
-
-```
-OneNest-AI
-│
-├── backend
-│   ├── OneNest.API
-│   ├── OneNest.Application
-│   ├── OneNest.Domain
-│   └── OneNest.Infrastructure
-│
-├── frontend
-│   └── OneNest.Web
-│
-├── docs
-│
-├── database
-│
-├── scripts
-│
-└── assets
-```
-
----
-
-# 📚 Documentation
-
-Detailed project documentation is available under the **docs** folder.
-
-| Document | Description |
-|-----------|-------------|
-| API.md | REST API documentation |
-| Database.md | Database schema |
-| Infrastructure.md | Backend architecture |
-| UI.md | Frontend architecture |
-| Roadmap.md | Product roadmap |
-| Vision.md | Long-term vision |
-
----
-
-# ⚡ Getting Started
-
-## Prerequisites
+### What you need
 
 - .NET 10 SDK
-- Node.js
-- npm
-- PostgreSQL
+- Node.js 20+
+- PostgreSQL with the `pgvector` extension enabled
+- A Google Gemini API key
+- A Supabase project (for storage — optional for local dev if you swap the file storage implementation)
 
----
-
-## Clone Repository
+### 1. Clone
 
 ```bash
 git clone https://github.com/Kanha412/OneNest-AI.git
-
 cd OneNest-AI
 ```
 
----
+### 2. Backend setup
 
-## Backend
+Copy the example env file and fill in your values:
+
+```bash
+cp .env.example .env
+# Edit .env — add your DB connection string, Gemini API key, JWT secret
+```
+
+Run the backend:
 
 ```bash
 cd backend/OneNest.API
-
 dotnet restore
-
-dotnet ef database update \
---project ../OneNest.Infrastructure \
---startup-project .
-
+dotnet ef database update --project ../OneNest.Infrastructure --startup-project .
 dotnet run
 ```
 
----
+Backend runs at: `https://localhost:5001`
+Swagger UI: `https://localhost:5001/swagger`
 
-## Frontend
+### 3. Frontend setup
 
 ```bash
 cd frontend/OneNest.Web
-
 npm install
-
 npm start
 ```
 
----
-
-# 🌐 Local URLs
-
-Frontend
-
-```
-http://localhost:4200
-```
-
-Backend
-
-```
-https://localhost:5001
-```
-
-Swagger
-
-```
-https://localhost:5001/swagger
-```
+Frontend runs at: `http://localhost:4200`
 
 ---
 
-# 🛣 Roadmap
+## Environment variables
 
-## ✅ Phase 1
+See `.env.example` at the root for the full list. Key ones:
 
-Authentication
-
----
-
-## ✅ Phase 2
-
-Workspace Modules
-
-- Notes
-- Tasks
-- Expenses
-- Documents
-- Health
+| Variable | What it is |
+|---|---|
+| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string |
+| `Gemini__ApiKey` | Google Gemini API key |
+| `Jwt__SecretKey` | JWT signing secret (min 32 chars) |
+| `Supabase__Url` | Supabase project URL |
+| `Supabase__ServiceRoleKey` | Supabase service-role key |
+| `Cors__AllowedOrigins__0` | Frontend URL (for CORS) |
 
 ---
 
-## ✅ Phase 3
+## How the AI works (quick summary)
 
-Workspace-aware AI
+When you send a message in the AI chat:
 
-- Persistent Conversations
-- Conversation Archive
-- Workspace Context
-- Tool Orchestration
+1. The **Workspace Orchestrator** decides which tools are relevant (Notes, Tasks, Expenses, Health, Documents).
+2. It uses a combination of **Gemini Planner** (LLM-based) and **keyword matching** to pick tools.
+3. Selected tools fetch your real data from the database.
+4. That data is bundled into a context block and added to the system prompt.
+5. **Gemini** generates a response that's grounded in your actual information.
 
----
-
-## ✅ Phase 4
-
-Product Polish & UX Hardening
-
-- AI Tool Planner
-- Smarter Context Selection
-- Better Prompt Orchestration
-- Settings, Legal Pages, Security UX
+For **RAG queries**, it also runs your question through the local ONNX model to find the most semantically similar chunks from your notes and documents, and uses those as additional context.
 
 ---
 
-## ✅ Phase 5
+## Notes on the embedding model
 
-AI Document Intelligence
-
-- Text extraction from PDF, DOCX, TXT on upload
-- Extracted text stored alongside document metadata
-- AI assistant can reference document content
+The app uses a **local ONNX model** (`all-MiniLM-L6-v2` INT8 quantized, ~22 MB) for generating embeddings. It runs inside the Docker container — no API call, no cost, no rate limits. The model is downloaded and SHA256-verified during the Docker build.
 
 ---
 
-## ✅ Phase 6
+## Documentation
 
-Contact Us & Admin Management
+Everything is documented. If you want to understand the product, APIs, database, or deployment — it's all here.
 
-- Contact form for user inquiries
-- Admin dashboard for user/contact management
+### 📋 Product & Architecture (PDF)
 
----
+| Document | What it covers |
+|---|---|
+| [Business Requirements Document](OneNest-Documentation/BRD/OneNest-BRD-v1.0.pdf) | Full product spec — use cases, all 60+ functional requirements, non-functional requirements, API contract summary, traceability matrix, glossary |
+| [Architecture & Flow Diagrams](OneNest-Documentation/BRD/OneNest-Architecture-Diagrams-v1.0.pdf) | 12 visual diagrams — system deployment, clean architecture, auth flow, RAG pipeline, semantic indexing, AI workspace, document upload, use case, data flow, routing, ER diagram, request lifecycle |
 
-## ✅ Phase 7 (Latest)
+### 📁 Technical Docs (Markdown)
 
-Semantic Search with pgvector
-
-- Notes and Documents auto-indexed with 768-dim embeddings
-- Natural-language similarity search
-- Per-chunk indexing with overlap
-- Backfill for pre-existing workspace items
-
----
-
-## 🔜 Upcoming
-
-- Smart AI Memory
-- AI Recommendations
-- Dashboard Insights
-- Voice Assistant
-- Mobile Responsive Improvements
-- Pagination & API versioning
-- Automated tests & CI/CD pipeline
+| File | What it covers |
+|---|---|
+| [docs/API.md](docs/API.md) | All REST endpoints, request/response shapes, status codes, DTO catalog |
+| [docs/Database.md](docs/Database.md) | All 13 entities, schema, indexes, migration timeline |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Step-by-step guide to deploy on Render (backend Docker + frontend static site) |
+| [docs/Infrastructure.md](docs/Infrastructure.md) | Backend architecture, DI setup, AI integration, embedding design |
+| [docs/UI.md](docs/UI.md) | Angular app structure, routing, guards, feature module behaviour |
+| [docs/Roadmap.md](docs/Roadmap.md) | What's been built (phases 1–7) and what's planned next |
+| [docs/Vision.md](docs/Vision.md) | Why OneNest exists, who it's for, guiding principles |
 
 ---
 
-# 🤝 Contributing
+## What's built (phases completed)
 
-Contributions are welcome.
-
-Feel free to:
-
-- Open Issues
-- Suggest Features
-- Submit Pull Requests
-
----
-
-# 📄 License
-
-This project is licensed under the MIT License.
+- ✅ Auth (register, login, JWT, password change, account deletion)
+- ✅ Notes, Tasks, Expenses, Documents, Health Hub
+- ✅ Workspace-aware AI chat (Gemini + tool orchestration)
+- ✅ AI document intelligence (text extraction + summarization)
+- ✅ Semantic search with local ONNX embeddings + pgvector
+- ✅ RAG pipeline (ask questions over your notes and documents)
+- ✅ Admin panel (user management, contact message handling)
+- ✅ Supabase Storage for files
+- ✅ Production-ready Docker setup for Render deployment
 
 ---
 
-# 👨‍💻 Developer
+## Developer
 
 **Kanha Gupta**
+<!-- Custom Software Engineering Analyst @ Accenture -->
 
-Custom Software Engineering Analyst @ Accenture
-
-.NET Full Stack Developer
-
-GitHub
-
-https://github.com/Kanha412
-
-LinkedIn
-
-https://linkedin.com/in/kanhagupta412
+- GitHub: [github.com/Kanha412](https://github.com/Kanha412)
+- LinkedIn: [linkedin.com/in/kanhagupta412](https://linkedin.com/in/kanhagupta412)
 
 ---
 
-<div align="center">
-
-### ⭐ If you like this project, consider giving it a Star!
-
-</div>
+MIT License

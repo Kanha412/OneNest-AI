@@ -1,245 +1,140 @@
-# OneNest AI Database Documentation
+# OneNest AI — Database
 
-This document describes the current database model implemented in `backend/OneNest.Infrastructure` and `backend/OneNest.Domain`.
+PostgreSQL 17 hosted on Supabase. ORM is Entity Framework Core. Vector search uses the `pgvector` extension.
 
-> Scope rule: only entities, relationships, indexes, and migrations that currently exist in code are documented.
+---
 
-## Stack
+## Entities (tables)
 
-- **Database provider:** PostgreSQL 17 (hosted on Supabase)
-- **Extensions:** `pgvector` (vector similarity search)
-- **ORM:** Entity Framework Core
-- **DbContext:** `OneNestDbContext`
-- **Migrations folder:** `backend/OneNest.Infrastructure/Migrations`
-- **Raw ADO.NET:** used in `EmbeddingRepository` for `vector(N)` column operations not supported by EF Core's Npgsql provider without the optional pgvector package
-
-## Schema Overview
-
-`OneNestDbContext` currently contains these sets:
-
-- `Users`
-- `UserSettings`
-- `Notes`
-- `Tasks`
-- `Expenses`
-- `Documents`
-- `Medicines`
-- `Appointments`
-- `MedicalRecords`
-- `MedicalReports`
-- `AIConversations`
-- `AIMessages`
-- `EmbeddingRecords` (Phase 8 — pgvector semantic search)
-
-## Entity Catalog
-
-| Entity | Purpose | User-owned |
+| Entity | What it stores | Owned by user? |
 |---|---|---|
-| `User` | Auth identity and profile | N/A (root user record) |
-| `UserSettings` | Per-user settings/preferences | Yes (`UserId`) |
+| `User` | Account info — name, email, password hash, role, last login | — (root record) |
+| `UserSettings` | Per-user preferences — theme, units, AI settings, notifications | Yes |
 | `Note` | Personal notes | Yes |
-| `TaskItem` | Personal tasks | Yes |
-| `Expense` | Income/expense transactions | Yes |
-| `Document` | Uploaded document metadata + extracted text | Yes |
-| `Medicine` | Medicine tracking | Yes |
-| `Appointment` | Healthcare appointments | Yes |
-| `MedicalRecord` | Current medical profile | Yes |
-| `MedicalReport` | Uploaded medical report metadata | Yes |
-| `AIConversation` | AI chat conversations | Yes |
-| `AIMessage` | Messages for a conversation | Indirect via conversation |
-| `EmbeddingRecord` | Semantic embedding vector for one chunk of a note or document | Yes (`UserId`) |
+| `TaskItem` | Tasks with priority, due date, completion | Yes |
+| `Expense` | Income and expense entries | Yes |
+| `Document` | Uploaded file metadata + extracted text | Yes |
+| `Medicine` | Medicines with schedule and food timing | Yes |
+| `Appointment` | Doctor appointments with status | Yes |
+| `MedicalRecord` | Single health profile per user (blood group, height, weight, etc.) | Yes |
+| `MedicalReport` | Uploaded health report metadata (lab, prescription, scan, etc.) | Yes |
+| `AIConversation` | Chat conversation headers | Yes |
+| `AIMessage` | Individual messages inside a conversation | Via conversation |
+| `ContactMessage` | Support/feedback messages sent by the user | Yes |
+| `EmbeddingRecord` | 384-dim vector for one text chunk of a note or document | Yes |
 
-## Core Columns by Entity
+Every user-owned table has a `UserId` column. All queries in the backend are scoped to the logged-in user's ID — no cross-user data leaks.
 
-## `Users`
+---
 
-- `Id` (uuid, PK)
-- `FullName` (text)
-- `Email` (text, unique)
-- `PasswordHash` (text)
-- `CreatedAt` (timestamp with time zone)
-- `UpdatedAt` (timestamp with time zone, nullable)
-- `LastLoginAt` (timestamp with time zone, nullable)
+## Key fields per entity
 
-## `UserSettings`
+### User
+- `Id` (uuid, PK), `FullName`, `Email` (unique), `PasswordHash`, `Role` (User/Admin), `CreatedAt`, `UpdatedAt`, `LastLoginAt`
 
-- `Id` (uuid, PK)
-- `UserId` (uuid, unique index)
-- Theme/UI settings: `Theme`, `CompactSidebar`, `EnableAnimations`
-- AI settings: `EnableWorkspaceContext`, `ContextDepth`, `DefaultConversationMode`, `ResponseStyle`, `EnableSmartSuggestions`
-- Notification settings: `EnableAppointmentReminders`, `EnableMedicineReminders`, `EnableTaskReminders`, `EnableWeeklySummary`, `EnableDesktopNotifications`
-- Documents/health defaults: `AutoDeleteTrashDays`, `DefaultHeightUnit`, `DefaultWeightUnit`, `ReminderLeadTimeHours`
-- `CreatedAt`, `UpdatedAt`
+### Note / TaskItem / Expense
+Standard pattern: `Id`, `UserId`, `CreatedAt`, `UpdatedAt` + domain-specific fields.
+- `TaskItem.Priority` — 1=Low, 2=Medium, 3=High
+- `Expense.Amount` — decimal(18,2); `TransactionType` — 1=Income, 2=Expense
 
-Defaults configured:
+### Document / MedicalReport (file entities)
+Both store file metadata in the DB and the actual file in Supabase Storage:
+- `OriginalFileName`, `StoredFileName` (path in bucket), `ContentType`, `FileSize`
+- `Document` also has `ExtractedText` and `AISummary` columns
 
-- `AutoDeleteTrashDays = 30`
-- `ReminderLeadTimeHours = 24`
+### AIConversation
+- `Title`, `IsArchived`, `IsDeleted` (soft delete), `LastMessageAt`
 
-## Notes/Tasks/Expenses
+### AIMessage
+- `ConversationId` (FK → AIConversations, **cascade delete**), `Role` (0=User, 1=Assistant), `Content`, `IsError`, `TokenCount`, `UsedWorkspaceData`, `WorkspaceToolsUsed`
 
-Shared pattern:
+### EmbeddingRecord
+- `UserId`, `SourceType` (0=Note, 1=Document), `SourceId`, `ChunkIndex`, `Embedding vector(384)`, `Title`
+- Unique constraint on `(UserId, SourceType, SourceId, ChunkIndex)` — safe to re-index
+- **Not managed by EF Core** — uses raw ADO.NET because EF's Npgsql provider doesn't natively map `vector(N)` without the optional pgvector package
+- Cosine similarity query: `"Embedding" <=> '{vector}'::vector` (lower = more similar)
 
-- `Id`, `UserId`, `CreatedAt`, `UpdatedAt`
-- Domain-specific fields (`Title`, `Description`, `Amount`, etc.)
+### ContactMessage
+- `Subject`, `Category` (0=General, 1=Support, 2=Bug, 3=Feedback), `Status` (0=New, 1=Read, 2=Resolved), `AdminReply`
 
-Notable field definitions:
-
-- `Expense.Amount` precision: **18,2**
-- `TaskItem.Priority` enum-backed integer
-- `TaskItem.CompletedAt` nullable
-
-## Documents/MedicalReports
-
-Shared file metadata pattern:
-
-- `OriginalFileName`
-- `StoredFileName`
-- `ContentType`
-- `FileSize`
-
-These entities store metadata in DB; file binary content is stored via file storage service.
-
-## Health Entities
-
-- `Medicine`: schedule flags (`Morning`, `Afternoon`, `Night`), dosage/timing, active flag
-- `Appointment`: doctor/hospital/date/time/status
-- `MedicalRecord`: one current profile per saved record operation (service-level behavior)
-- `MedicalReport`: report classification, doctor/hospital/date, file metadata
-
-## AI Entities
-
-### `AIConversation`
-
-- `Id` (PK)
-- `UserId`
-- `Title`
-- `CreatedAt`, `UpdatedAt`, `LastMessageAt`
-- `IsArchived`, `IsDeleted`
-
-### `AIMessage`
-
-- `Id` (PK)
-- `ConversationId` (FK -> `AIConversations.Id`)
-- `Role` (enum-backed int)
-- `Content`
-- `CreatedAt`
-- `TokenCount` (nullable)
-- `IsError`
-
-## Semantic Search Entity
-
-### `EmbeddingRecord`
-
-- `Id` (uuid, PK)
-- `UserId` (uuid) — every search is scoped to a single user
-- `SourceType` (int: `0` = Note, `1` = Document)
-- `SourceId` (uuid) — PK of the source entity
-- `Title` (text, nullable) — human-readable label cached for search results
-- `ChunkIndex` (int) — zero-based position of this chunk within the source item
-- `Embedding` (`vector(768)`) — L2-normalised embedding stored via pgvector
-- `CreatedAt`, `UpdatedAt` (nullable)
-
-**Notes:**
-- One source item can produce multiple `EmbeddingRecord` rows (one per chunk).
-- The unique constraint is on `(UserId, SourceType, SourceId, ChunkIndex)` — upserts are used on re-index.
-- The `Embedding` column uses pgvector's `vector(768)` type. EF Core does not manage this column directly; `EmbeddingRepository` uses raw ADO.NET.
-- Cosine similarity search: `1 - ("Embedding" <=> '{vector}'::vector) AS "Score"`
+---
 
 ## Relationships
 
-The explicit EF relationship configured in `OnModelCreating`:
-
-- `AIConversation (1) -> (many) AIMessage`
-  - FK: `AIMessage.ConversationId`
-  - Delete behavior: **Cascade**
-
-Other ownership relations are currently represented by `UserId` columns and enforced in repository/service logic.
-
-## ER Overview (Current)
-
-```mermaid
-erDiagram
-  USERS ||--o{ NOTES : owns
-  USERS ||--o{ TASKS : owns
-  USERS ||--o{ EXPENSES : owns
-  USERS ||--o{ DOCUMENTS : owns
-  USERS ||--o{ MEDICINES : owns
-  USERS ||--o{ APPOINTMENTS : owns
-  USERS ||--o{ MEDICAL_RECORDS : owns
-  USERS ||--o{ MEDICAL_REPORTS : owns
-  USERS ||--o{ AI_CONVERSATIONS : owns
-  USERS ||--|| USER_SETTINGS : has
-  USERS ||--o{ EMBEDDING_RECORDS : owns
-
-  AI_CONVERSATIONS ||--o{ AI_MESSAGES : contains
 ```
+User ──< Note
+User ──< TaskItem
+User ──< Expense
+User ──< Document
+User ──< Medicine
+User ──< Appointment
+User ─── MedicalRecord (1:1, upsert)
+User ──< MedicalReport
+User ──< AIConversation ──< AIMessage (cascade delete)
+User ─── UserSettings (1:1)
+User ──< ContactMessage
+User ──< EmbeddingRecord
+```
+
+The only explicit EF cascade is `AIConversation → AIMessage`. All other ownership is enforced in service/repository code via `UserId`.
+
+---
 
 ## Indexes
 
-Configured indexes from DbContext/migrations:
-
-| Table | Index | Unique |
+| Table | Column(s) | Unique? |
 |---|---|---|
 | `Users` | `Email` | Yes |
 | `UserSettings` | `UserId` | Yes |
-| `AIConversations` | `UserId` | No |
-| `AIConversations` | `CreatedAt` | No |
-| `AIConversations` | `UpdatedAt` | No |
-| `AIConversations` | `LastMessageAt` | No |
-| `AIMessages` | `ConversationId` | No |
-| `AIMessages` | `CreatedAt` | No |
-| `EmbeddingRecords` | `(UserId, SourceType, SourceId, ChunkIndex)` | Yes (upsert key) |
-| `EmbeddingRecords` | `(UserId, SourceType, SourceId)` | No (fast delete by source) |
+| `AIConversations` | `UserId`, `CreatedAt`, `UpdatedAt`, `LastMessageAt` | No |
+| `AIMessages` | `ConversationId`, `CreatedAt` | No |
+| `EmbeddingRecords` | `(UserId, SourceType, SourceId, ChunkIndex)` | Yes |
+| `EmbeddingRecords` | `(UserId, SourceType, SourceId)` | No (fast delete per source) |
 
-## Migration Timeline
+---
 
-## `20260803123221_AddAuthAndUserOwnership`
+## Migration timeline
 
-- Added `Users` table
-- Added `UserId` to `Tasks` and `Notes`
-- Added unique index `IX_Users_Email`
+| Migration | When | What changed |
+|---|---|---|
+| `InitialCreate` | 2026-08-03 | Notes, Tasks tables |
+| `AddAuthAndUserOwnership` | 2026-08-03 | Users table, UserId FK on Notes+Tasks, email unique index |
+| `AddExpenses` | 2026-08-03 | Expenses table |
+| `AddDocuments` | 2026-08-03 | Documents table |
+| `AddHealthHub` | 2026-08-03 | Medicines, Appointments, MedicalRecords, MedicalReports |
+| `AddAIConversationHistory` | 2026-08-04 | AIConversations, AIMessages, cascade delete, indexes |
+| `AddUserSettings` | 2026-08-04 | UserSettings table, defaults (AutoDeleteTrashDays=30) |
+| `AddUserLastLoginAt` | 2026-08-05 | LastLoginAt column on Users |
+| `AddContactAndUserRole` | 2026-08-17 | ContactMessages table, Role column on Users |
+| `AddDocumentTextExtraction` | 2026-08-17 | ExtractedText, AISummary on Documents |
+| `AddSemanticEmbeddings` | 2026-08-17 | pgvector extension, EmbeddingRecords with `vector(384)`, indexes |
 
-## `20260804074022_AddAIConversationHistory`
+---
 
-- Added `AIConversations`
-- Added `AIMessages`
-- Added AI indexes (`UserId`, timestamps, FK index)
-- Added cascade delete from conversations to messages
+## Running migrations
 
-## `20260804210920_AddUserSettings`
+```bash
+cd backend
+dotnet ef database update \
+  --project OneNest.Infrastructure \
+  --startup-project OneNest.API
+```
 
-- Added `UserSettings` table
-- Added unique index `IX_UserSettings_UserId`
-- Added default values:
-  - `AutoDeleteTrashDays = 30`
-  - `ReminderLeadTimeHours = 24`
+For production (Supabase), pass the connection string explicitly:
+```bash
+dotnet ef database update \
+  --project OneNest.Infrastructure \
+  --startup-project OneNest.API \
+  --connection "Host=...pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.<ref>;Password=...;SSL Mode=Require;Trust Server Certificate=true"
+```
 
-## `20260805111607_AddUserLastLoginAt`
+This is safe to run multiple times — only pending migrations are applied.
 
-- Added nullable `LastLoginAt` to `Users`
+---
 
-## `20260817153225_AddSemanticEmbeddings`
+## Things to improve (planned)
 
-- Enabled `pgvector` extension: `CREATE EXTENSION IF NOT EXISTS vector`
-- Created `EmbeddingRecords` table with `Embedding vector(768)` column
-- Added unique index on `(UserId, SourceType, SourceId, ChunkIndex)` for upsert
-- Added composite index on `(UserId, SourceType, SourceId)` for source-level deletes
-- Added `ExtractedText` column to `Documents` table for storing AI-extracted text content
-- **Note:** `vector(N)` DDL is applied via raw SQL (`migrationBuilder.Sql()`) since EF Core's Npgsql provider does not generate `vector` column types without the optional pgvector NuGet package
-
-## Data Ownership and Isolation
-
-- Nearly all feature records contain `UserId` for per-account isolation.
-- API controllers are authorized for protected modules.
-- Current-user context is resolved from JWT (`NameIdentifier` claim) by `CurrentUserService` and used in repositories/services.
-
-## Planned Improvements
-
-> Planned improvements are recommendations; they are not fully implemented yet.
-
-- Add explicit foreign-key constraints from user-owned tables to `Users` for stronger referential integrity.
-- Add composite indexes for common filtered queries (for example `UserId + CreatedAt` on high-volume tables).
-- Add soft-delete lifecycle columns where long-term audit history is required.
-- Add migration-level checks/constraints for enum value safety and data quality rules.
-- Add DB seed strategy for local development and onboarding.
+- Add explicit FK constraints from user-owned tables to `Users` (currently enforced in code, not DB)
+- Add composite indexes for common filter patterns (`UserId + CreatedAt` on high-volume tables)
+- Add soft-delete columns where history matters (notes, documents)
+- Add a dev seed script for local onboarding

@@ -1,238 +1,227 @@
-# OneNest AI UI Documentation (Angular)
+# OneNest AI — Frontend (Angular)
 
-This document explains the current Angular frontend structure and behavior.
+How the Angular frontend is structured and how each part works.
 
-## Frontend Stack
+---
 
-- **Framework:** Angular 22 (standalone components)
-- **State style:** Angular signals + reactive forms
-- **HTTP:** `HttpClient` with interceptors
-- **Charts:** `chart.js`
+## Tech
 
-## App Structure
+- Angular 22, TypeScript — standalone components throughout
+- Angular Signals (`signal()`, `computed()`, `effect()`, `toSignal()`) for reactive state
+- Reactive Forms for form validation
+- `HttpClient` with functional interceptors
+- Chart.js for dashboard charts
+- JWT tokens in `localStorage` for auth state
 
-```text
-src/app
-├─ app.routes.ts
-├─ app.config.ts
-├─ core/
-│  ├─ auth.guard.ts
-│  ├─ auth.interceptor.ts
-│  └─ unauthorized.interceptor.ts
-├─ layout/
-│  ├─ layout.ts
-│  ├─ layout.html
-│  └─ layout.css
-├─ features/
-│  ├─ auth/ (login, register)
-│  ├─ dashboard/
-│  ├─ notes/
-│  ├─ tasks/
-│  ├─ expenses/
-│  ├─ documents/
-│  ├─ health/
-│  ├─ ai-assistant/
-│  ├─ settings/
-│  └─ legal/ (privacy-policy, terms)
-├─ services/
-├─ models/
-└─ shared/ (toast, confirm, spinner, paginator, chart)
+---
+
+## App structure
+
+```
+src/app/
+├── app.routes.ts          → all route definitions
+├── app.config.ts          → bootstrap configuration
+├── core/
+│   ├── auth.guard.ts      → authGuard (JWT expiry check)
+│   ├── admin.guard.ts     → adminGuard (role check)
+│   ├── auth.interceptor.ts       → adds Bearer token to all requests
+│   └── unauthorized.interceptor.ts → handles 401 → redirect to login
+├── layout/
+│   ├── layout.ts/html/css  → sidebar shell, user info, logout
+├── features/
+│   ├── auth/              → login, register
+│   ├── dashboard/
+│   ├── notes/
+│   ├── tasks/
+│   ├── expenses/
+│   ├── documents/
+│   ├── health/            → medicines, appointments, records, reports (tabbed)
+│   ├── ai-assistant/
+│   ├── semantic-search/
+│   ├── contact/
+│   ├── settings/
+│   ├── admin/
+│   └── legal/             → privacy policy, terms of service
+├── services/              → HTTP service per feature area
+├── models/                → TypeScript interfaces
+└── shared/
+    └── components/        → toast, confirm dialog, spinner, paginator, charts
 ```
 
-## Navigation and Routing
+---
 
-Main route map:
+## Routes
 
-- Public:
-  - `/login`
-  - `/register`
-- Protected (behind `authGuard`):
-  - `/dashboard`
-  - `/notes`
-  - `/tasks`
-  - `/expenses`
-  - `/documents`
-  - `/health`
-  - `/ai-assistant`
-  - `/settings`
-  - `/privacy-policy`
-  - `/terms`
+**Public (no auth required)**
 
-Fallback route redirects to root.
+| Route | Component |
+|---|---|
+| `/login` | LoginComponent |
+| `/register` | RegisterComponent |
+| `/privacy-policy` | PrivacyPolicyComponent |
+| `/terms` | TermsComponent |
 
-## Layout System
+**Protected (requires valid JWT — checked by `authGuard`)**
 
-The root protected shell (`Layout`) provides:
+| Route | Component | Extra guard |
+|---|---|---|
+| `/dashboard` | DashboardComponent | — |
+| `/notes` | NotesComponent | — |
+| `/tasks` | TasksComponent | — |
+| `/expenses` | ExpensesComponent | — |
+| `/documents` | DocumentsComponent | — |
+| `/health` | HealthComponent | — |
+| `/ai-assistant` | AiAssistantComponent | — |
+| `/semantic-search` | SemanticSearchComponent | — |
+| `/contact` | ContactComponent | — |
+| `/settings` | SettingsComponent | — |
+| `/admin` | AdminComponent | `adminGuard` |
 
-- Left sidebar navigation
-- User identity summary (name/email)
-- Logout action with confirmation
-- Main scrollable content area for feature pages
-- Global `<app-confirm />` and `<app-toast />` mounts
+Any other URL redirects to `/dashboard` if logged in, or `/login` if not.
 
-## Authentication UX Flow
+---
 
-```mermaid
-flowchart LR
-  L[Login/Register] --> S[AuthService stores token + user in localStorage]
-  S --> G[authGuard allows protected routes]
-  G --> A[App features]
-  A --> I[authInterceptor adds Bearer token]
-  I --> U[unauthorizedInterceptor handles 401]
-  U --> L
-```
+## Guards and interceptors
 
-Behavior details:
+**`authGuard`**
+- Checks if a JWT is in `localStorage` and whether it's expired (decodes `exp` claim client-side)
+- If missing or expired → redirects to `/login` immediately (no API call)
+- Token stored as `onenest.token` in localStorage
 
-- Token key: `onenest.token`
-- User key: `onenest.user`
-- On 401 while authenticated: auto logout and redirect to login.
+**`adminGuard`**
+- Checks if the user's role is `Admin` (reads from `onenest.user` in localStorage)
+- Non-admins hitting `/admin` → redirect to `/dashboard`
 
-## Design System & Styling Conventions
+**`authInterceptor`**
+- Automatically adds `Authorization: Bearer <token>` to every outgoing HTTP request
+- Functional interceptor (no class boilerplate)
 
-Global style tokens are defined in `src/styles.css`:
+**`unauthorizedInterceptor`**
+- If a 401 response comes back from the API → clears localStorage → redirects to `/login`
+- Handles session expiry without the user having to do anything
 
-- Color tokens (`--color-primary`, `--color-danger`, etc.)
-- Radius/shadow tokens
-- Spacing scale
-- Font base
+---
 
-Shared UI patterns used widely:
+## Layout (shell)
 
-- `.page`
-- `.card`
-- `.btn` variants
-- `.form-group`, `.row`
-- `.actions`
-- `.field-error`
+All protected routes render inside the `Layout` component which provides:
+- Left sidebar with navigation links
+- User name + email display at the bottom
+- Logout button with confirmation dialog
+- Global `<app-toast>` for success/error notifications
+- Global `<app-confirm>` for destructive action confirmations
 
-Feature CSS files refine per-module layout while keeping global visual language.
+---
 
-## Responsiveness
+## Feature pages
 
-Current app layout uses a fixed sidebar + scrollable content pattern (`height: 100dvh`).
+### Dashboard
+- Summary cards: total notes, pending tasks, total expenses, active medicines
+- Bar chart: monthly expenses by category
+- Pie chart: expense category distribution
+- Upcoming appointments list
+- Recent notes list
+- Empty states shown when no data exists yet
 
-- Desktop behavior is polished across core pages.
-- Components use flexible blocks (`row`, `actions`, wrapped button groups).
-- No separate mobile shell is currently defined in routes/layout.
+### Notes
+- Create, edit, delete notes
+- Pin / archive toggle
+- Search by title or content
+- Notes are auto-indexed in the background after every save (for semantic search)
 
-## Feature Module Behavior
+### Tasks
+- Create tasks: title, description, due date, priority (Low/Medium/High)
+- Mark complete / incomplete (toggle)
+- Filter by status, sort by date or priority
+- Pagination
+- Search
 
-## Dashboard
+### Expenses
+- Log income or expense: title, amount (₹), date, category, notes
+- Categories: Food, Travel, Shopping, Bills, Entertainment, Health, Education, Salary, Investment, Other
+- Filter by category, type (income/expense), date
+- Income/expense badges color-coded
 
-- Aggregates data from Notes, Tasks, Expenses, Documents, and Health Summary services.
-- Uses chart components for:
-  - Expense category distribution
-  - Monthly income vs expense
-  - Health medicine timing distribution
-  - Appointment timeline
-- Uses explicit empty states (`No ... yet`) for missing data.
+### Documents
+- Upload files — PDF, Word, Excel, PowerPoint, text, CSV, images (max 25 MB per file, 150 MB total)
+- Text is extracted automatically on upload (PDF, DOCX, TXT)
+- Preview inline or download individual files
+- Bulk download all as ZIP
+- Delete individual or all files
+- Storage usage bar shown
+- Search and category filter
 
-## Notes
+### Health Hub — 4 tabs
+1. **Medicines** — add medicines with name, dosage, frequency, food timing, morning/afternoon/night schedule; filter active
+2. **Appointments** — schedule with doctor name, hospital, specialty, date, time, status; upcoming badge count
+3. **Medical Records** — single editable record: blood group, height, weight (units from settings), allergies, conditions, emergency contact; BMI auto-calculated
+4. **Reports** — upload lab reports, prescriptions, scans, discharge summaries; preview and download
 
-- CRUD + pin toggle
-- List-based note management
+### AI Assistant
+- Left panel: conversation list with search, filter (all/active/archived)
+- Create new conversation, rename, archive, delete
+- Right panel: message thread with user/assistant bubbles
+- Workspace context indicators on assistant messages (which tools were used)
+- Suggested prompts shown when starting a conversation
+- Response depth controlled in Settings (short / balanced / detailed)
 
-## Tasks
+### Semantic Search
+- Type a plain-English query and get ranked results from your notes and documents
+- Filter by source type (all / notes only / documents only)
+- Each result shows title, type, and similarity score
 
-- CRUD + complete toggle
-- Priority and due-date handling
+### Contact
+- Send a message to admin: subject, category (General/Support/Bug/Feedback), message
+- View your submitted tickets and their status (New/Read/Resolved)
+- See admin reply when available
 
-## Expenses
+### Settings — sections
+1. **Account** — update display name (email is read-only)
+2. **AI Preferences** — context depth, response style
+3. **Storage** — total used (documents + health reports combined), remaining space, download archive ZIP, clear all storage
+4. **Health** — height unit (cm/ft), weight unit (kg/lbs)
+5. **Privacy & Security** — change password modal, delete account modal (both need password confirmation)
+6. **About** — app version, links to Privacy Policy and Terms
 
-- CRUD + summary analytics
-- Category and transaction-type aware entries
+### Admin (role=Admin only)
+- **Messages tab** — all contact messages, expandable cards, reply form, status update dropdown; new message count badge
+- **Users tab** — all users, role column with toggle (cannot change own role)
 
-## Documents
+---
 
-- Upload/update/delete
-- Search, category filter, sorting, pagination
-- Preview/download per file
-- 25 MB client upload guard
+## Service → API mapping
 
-## Health
-
-Tabbed health workspace:
-
-- Medicines
-- Appointments
-- Medical record
-- Medical reports
-
-Includes:
-
-- Filtering/searching/pagination where applicable
-- Report upload/preview/download
-- Unit-aware medical record handling via settings (cm/ft, kg/lb)
-
-## AI Assistant
-
-Current UX includes:
-
-- Conversation list with filter (`all|active|archived`) and search
-- Create/rename/archive/unarchive/delete conversation
-- Suggested prompts
-- Workspace-context indicators on assistant responses
-- Composer visibility tied to selected active conversation context
-- Empty states:
-  - no conversation selected
-  - selected conversation with no messages
-
-## Settings
-
-Sections currently shown:
-
-- Account
-- AI Preferences
-- Storage
-- Measurements
-- Security
-- About
-
-Key user-facing behaviors:
-
-- AI Preferences UI exposes **Context Depth** and **Response Style** controls.
-- Storage section aggregates usage across Documents + Health Reports under 150 MB display logic.
-- Storage actions:
-  - Download storage archive (ZIP)
-  - Clear storage (confirmation + result toast)
-- Security section:
-  - Change password modal flow
-  - Delete account flow (confirmation + password modal)
-- About section links to:
-  - Privacy Policy
-  - Terms
-  - GitHub repository
-
-## Legal Pages
-
-- `/privacy-policy`
-- `/terms`
-
-Both are integrated in-app pages with return link to settings.
-
-## Service Layer Mapping (Frontend -> Backend)
-
-| Frontend service | Backend API area |
+| Angular service | Backend routes |
 |---|---|
 | `AuthService` | `/api/auth/*` |
-| `AiService` | `/api/ai/*` |
+| `NotesService` | `/api/notes/*` |
+| `TasksService` | `/api/tasks/*` |
+| `ExpensesService` | `/api/expenses/*` |
 | `DocumentsService` | `/api/documents/*` |
 | `HealthHubService` | `/api/medicines`, `/api/appointments`, `/api/medicalrecords`, `/api/medicalreports`, `/api/health-hub/summary` |
+| `AiService` | `/api/ai/*` |
+| `SemanticSearchService` | `/api/semantic-search` |
+| `ContactService` | `/api/contact/*` |
+| `AdminService` | `/api/admin/*` |
 | `SettingsService` | `/api/settings` |
-| `ExpensesService` | `/api/expenses` |
-| `NotesService` | `/api/notes` |
-| `TasksService` | `/api/tasks` |
-| `SemanticSearchService` *(planned)* | `/api/semantic-search` |
 
-> **Note:** Semantic search backend endpoints are fully implemented (Phase 7). A frontend UI surface for semantic search is a planned improvement for a future phase.
+---
 
-## Planned Improvements
+## Design system
 
-> Planned improvements are recommendations based on current UI implementation.
+Styles are in `src/styles.css` with CSS custom properties:
+- `--color-primary`, `--color-danger`, `--color-success`, etc.
+- Border radius and shadow tokens
+- Shared CSS classes: `.page`, `.card`, `.btn`, `.form-group`, `.actions`, `.field-error`
 
-- Add first-class mobile navigation (collapsible sidebar/top-nav pattern).
-- Add route-level code splitting for faster initial load.
-- Add accessibility pass (keyboard flows, ARIA labels, contrast checks).
-- Add richer error boundaries and retry UX for network failures.
-- Add component-level unit tests and e2e coverage for critical flows (auth, storage, AI chat).
+Each feature module has its own CSS file for layout specifics.
+
+---
+
+## Things to improve (planned)
+
+- Mobile navigation (collapsible sidebar / bottom nav for small screens)
+- Accessibility pass: keyboard focus, ARIA labels, color contrast
+- Route-level code splitting for faster initial load
+- Component unit tests + E2E tests for auth and document flows
+- Richer error boundary UX for network failures

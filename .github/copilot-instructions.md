@@ -1,14 +1,55 @@
 # Copilot Instructions
 
-## Project Guidelines
-- User prefers enterprise-style AI architecture: AIService must depend on abstractions (IAIProvider, IAIPromptBuilder), prompt construction must be isolated in a prompt builder, AI providers must be swappable via DI, and AI settings (Provider/Model/ApiKey/Temperature/MaxTokens) must be in configuration options.
-- User prefers free-cost AI setup for development/testing and wants multi-provider routing to avoid rate limits. Only APIs, not local like Ollama.
-- Project environment setup is local-only (no production environment currently); prefer local-focused configuration changes.
+Guidelines for AI assistants working in this repo.
 
-## UI Preferences
-- User prefers concise SaaS-style Settings UI: remove Notifications and Appearance sections, keep a single bottom Save button styled to look modern, style readonly account fields distinctly, separate Security and Danger Zone actions, and include polished hover/spacing/icon refinements.
-- In Settings > Storage, show only two summary fields (Total Storage Used and Total Stored Files), aggregate everything under All (Documents + Health Reports), and show a small italic remaining-space text in the storage-used card.
-- Security tab should show only two action buttons initially (Change Password, Delete Account), each opening its own popup modal; label should be 'Security'; hide Save Changes in Storage/Security/About.
+---
 
-## Interaction Guidelines
-- When requested, provide explanation-only responses without code changes or code snippets.
+## Architecture rules
+
+- Backend follows Clean Architecture: `Domain → Application → Infrastructure → API`. Never import outer layers into inner ones.
+- All services depend on interfaces from `OneNest.Application` — never concrete implementations directly.
+- AI provider (`IAIProvider`), embedding provider (`IEmbeddingProvider`), and file storage (`IFileStorageService`) must be swappable via DI.
+- AI settings (Provider, Model, ApiKey, Temperature, MaxTokens) come from configuration options — never hardcoded.
+- Prompt construction is isolated from the provider — `IAIPromptBuilder` or service-level prompt methods, not inline strings in controllers.
+
+## Embedding model
+
+- **Default and preferred**: `LocalEmbeddingProvider` — ONNX `all-MiniLM-L6-v2` INT8, 384-dim, runs in-process.
+- `GeminiEmbeddingProvider` (768-dim) is an alternate, not the default.
+- `EmbeddingRecords` uses `vector(384)` — do not change the dimension without a new migration.
+- `EmbeddingRepository` uses raw ADO.NET for pgvector operations — do not switch to EF Core without verifying Npgsql pgvector support.
+
+## AI model
+
+- Chat model: `gemini-2.5-flash` (not `gemini-3.5-flash` — that was an old placeholder).
+- Set via `AI__Model` environment variable; never hardcode in Program.cs.
+
+## Cost constraint
+
+- Do not introduce any paid API for embeddings or AI when a free/local alternative works.
+- ONNX model runs locally at zero cost — prefer it for embeddings.
+- Gemini API key is only used for chat and RAG generation.
+
+## Settings UI preferences
+
+- Settings page has: Account, AI Preferences, Storage, Health (units), Privacy & Security, About.
+- No Notifications or Appearance sections.
+- Storage section shows Total Storage Used + Total Stored Files (documents + health reports combined).
+- Security section shows only Change Password and Delete Account — each opens a modal.
+- No inline Save Changes button in Storage, Security, or About tabs.
+
+## Data ownership
+
+- Every user-owned entity has a `UserId` column.
+- All queries in services/repositories must filter by `UserId` from `ICurrentUserService`.
+- Never return or expose another user's data.
+
+## Background indexing
+
+- Semantic indexing after note/document CRUD must use `Task.Run()` in a new DI scope.
+- HTTP response must return immediately — indexing never blocks the user.
+- Indexing errors are logged at Warning level and never propagated.
+
+## When asked for explanations
+
+- Provide explanation only when asked — don't include code changes unless requested.

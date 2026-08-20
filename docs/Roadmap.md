@@ -1,130 +1,109 @@
-# OneNest AI Product Roadmap
+# OneNest AI — Roadmap
 
-This roadmap summarizes progress based on what is currently present in the repository and outlines practical next phases.
+What's been built and what's coming next.
 
-> Completed items below reflect implemented code in backend/frontend and migrations.
+---
 
-## Product Direction Snapshot
+## What's done
 
-OneNest AI is currently a personal productivity + life-management platform that combines:
+### Phase 1 — Foundation
+- Angular app shell with JWT auth guard
+- ASP.NET Core API with JWT authentication
+- Notes and Tasks modules
+- Per-user data isolation (`UserId` pattern on all tables)
 
-- productivity modules (notes, tasks)
-- personal finance tracking
-- document vault
-- health records/reports management
-- workspace-aware AI assistant
-
-## Delivery Phases
-
-## Phase 1 — Foundation (Completed)
-
-- Core Angular app shell with authenticated route guard
-- Core ASP.NET API with JWT authentication
-- Initial note/task modules
-- User ownership model introduced (`UserId` pattern)
-
-## Phase 2 — Domain Expansion (Completed)
-
-- Expenses module with summaries
-- Documents module with upload/preview/download
-- Health modules:
-  - medicines
-  - appointments
-  - medical record
-  - medical reports
+### Phase 2 — Domain expansion
+- Expenses module with category breakdown and monthly summaries
+- Documents module — upload, preview, download, bulk ZIP
+- Health Hub — medicines, appointments, medical record, medical reports
 - Health summary endpoint for dashboard aggregation
 
-## Phase 3 — AI Assistant + Personalization (Completed)
+### Phase 3 — AI Assistant
+- Persistent conversation model (`AIConversations`, `AIMessages`)
+- Workspace tools — AI reads your real notes, tasks, expenses, health data, documents
+- Gemini integration (`gemini-2.5-flash`)
+- User settings stored in DB (`UserSettings`)
+- Last login tracking
 
-- AI conversation history model (`AIConversations`, `AIMessages`)
-- Workspace tools for contextual AI responses
-- Gemini-based provider integration
-- User settings model (`UserSettings`) + settings UI integration
-- Last login tracking added to user profile
+### Phase 4 — UX polish
+- AI preferences simplified to context depth + response style
+- Storage section aggregates documents + health reports under 150 MB
+- Security tab: change password modal + delete account modal
+- Dashboard empty states and card alignment
+- Privacy policy and terms pages
 
-## Phase 4 — Product Polish & UX Hardening (Completed)
-
-- AI preferences simplified in UI to context depth + response style
-- Storage experience aligned to combined documents + health reports usage
-- Security tab streamlined to change password + account deletion flows
-- Dashboard empty-state and card alignment improvements
-- AI assistant empty/composer behavior improved for no-active-conversation cases
-- Privacy policy and terms pages added and wired
-
-## Phase 5 — AI Document Intelligence (Completed)
-
-- Text extraction pipeline on document upload (PDF, DOCX, TXT)
-- `ExtractedText` column added to `Documents` table
+### Phase 5 — AI Document Intelligence
+- Text extraction on upload (PDF, DOCX, TXT)
+- `ExtractedText` column added to Documents
 - AI assistant can reference document content via workspace tool
-- `IDocumentTextExtractor` interface with format-specific implementations
+- On-demand AI document summarization endpoint
 
-## Phase 6 — Contact Us & Admin Management (Completed)
+### Phase 6 — Contact Us & Admin
+- Contact form — users can send support/feedback messages
+- Admin dashboard — view all users, manage roles, reply to contact messages
+- `[Authorize(Roles="Admin")]` protection on admin endpoints
 
-- Contact form for user inquiries stored in database
-- Admin dashboard endpoint for listing and managing contacts
-- Admin user management (list users, view stats)
-
-## Phase 7 — Semantic Search with pgvector (Completed)
-
+### Phase 7 — Semantic Search & RAG (latest)
 - `pgvector` extension enabled on PostgreSQL
-- `EmbeddingRecords` table with `vector(768)` column
-- `GeminiEmbeddingProvider` using `gemini-embedding-001` (768-dim vectors)
-- `TextChunker` with configurable chunk size (1 200 chars) and overlap (240 chars)
-- `SemanticIndexService` — best-effort background indexing on every note/document CRUD
-- `SemanticSearchService` — cosine similarity search scoped to authenticated user
-- `BackfillService` — re-index pre-existing workspace items
-- `SemanticSearchController` — `POST /api/semantic-search` and `POST /api/semantic-search/backfill`
-- Optional `LocalEmbeddingProvider` (all-MiniLM-L6-v2 ONNX, 384-dim, offline)
+- `EmbeddingRecords` table with `vector(384)` column
+- Local ONNX embedding model (`all-MiniLM-L6-v2` INT8, 384-dim) — runs in-process, zero cost
+- `TextChunker` — 1200-char chunks with 240-char overlap, sentence-aware
+- Auto-indexing on every note/document create/update (background, never blocks user)
+- Semantic search endpoint — cosine similarity search scoped to the logged-in user
+- RAG pipeline — 9-step flow: embed query → vector search → filter → fetch text → build context → Gemini → return answer with source citations
+- Backfill endpoint — re-index all existing notes and documents
+- Supabase Storage for all file persistence (replaces local disk)
+- Docker multi-stage build with SHA256-verified ONNX model
+- Production-ready: ForwardedHeaders, env-driven CORS, non-root Docker user, health check
 
-## Milestone View
+---
 
-| Milestone | Status | Evidence in code |
-|---|---|---|
-| Auth + user ownership | Done | Auth controller + migration `AddAuthAndUserOwnership` |
-| AI history persistence | Done | migration `AddAIConversationHistory`, AI services |
-| Settings persistence | Done | migration `AddUserSettings`, settings controller/service |
-| Last login tracking | Done | migration `AddUserLastLoginAt`, settings account payload |
-| Unified storage controls | Done | settings + documents/health aggregation in frontend and backend endpoints |
-| Legal pages integrated | Done | `privacy-policy` and `terms` routes/pages |
-| AI document text extraction | Done | `DocumentTextExtractor`, `ExtractedText` on `Documents` |
-| Contact + admin management | Done | `ContactRepository`, `AdminService`, admin endpoints |
-| Semantic search (pgvector) | Done | migration `AddSemanticEmbeddings`, `EmbeddingRecords`, search endpoints |
+## What's planned
 
-## Upcoming Phases (Planned Improvements)
+### Next — Platform maturity
+- Consistent API error response format (`{ code, message, details }`)
+- Pagination on list endpoints (notes, tasks, documents, conversations)
+- Stronger DB referential integrity (explicit FK constraints)
+- Centralized exception middleware
+- Structured observability (correlation IDs, request logging)
 
-## Phase 8 — API and Platform Maturity
+### Quality & CI/CD
+- Unit and integration tests for backend services
+- Component and E2E tests for the Angular frontend
+- CI pipeline for build / test / lint on every push
+- Release versioning and changelog
 
-- Standardize API error envelopes and response conventions
-- Add pagination contracts for list-heavy endpoints
-- Add stronger DB referential constraints and index tuning
-- Add centralized exception middleware + structured observability
+### UX & accessibility
+- Mobile-first navigation (collapsible sidebar)
+- Accessibility pass — keyboard flows, ARIA labels, contrast
+- Performance budgets and lazy-loaded feature modules
+- Richer error states and retry UX
 
-## Phase 9 — Quality and Release Engineering
+### Long-term ideas
+- Smart AI memory — remembers user preferences and patterns across conversations
+- AI-powered dashboard insights — surface patterns in expenses, health, and tasks
+- Voice assistant integration
+- Offline-capable PWA
+- API versioning (`/api/v1/`) for stable integrations
 
-- Add comprehensive automated tests (backend + frontend)
-- Add CI pipeline for build/test/lint/doc checks
-- Add environment templates and deployment documentation
-- Add release versioning and changelog process
+---
 
-## Phase 10 — UX, Accessibility, and Mobile Readiness
+## Milestone summary
 
-- Responsive navigation for smaller screens
-- Accessibility audit/remediation
-- Performance budgets and lazy loading strategy
-
-## Long-Term Vision
-
-- Evolve from a productivity app into a reliable personal operating system that combines:
-  - personal knowledge
-  - health context
-  - finance context
-  - assistant-guided decision support
-- Keep user data context central so AI responses stay practical and personalized.
-
-## Roadmap Governance Notes
-
-- This roadmap is implementation-informed (code-first), not marketing-first.
-- Reprioritization should be driven by:
-  1. reliability/security gaps
-  2. user workflow friction
-  3. deployment readiness
+| Feature | Status |
+|---|---|
+| Auth + user isolation | ✅ Done |
+| Notes, Tasks, Expenses | ✅ Done |
+| Documents with storage | ✅ Done |
+| Health Hub | ✅ Done |
+| AI chat with workspace context | ✅ Done |
+| Persistent conversations | ✅ Done |
+| User settings | ✅ Done |
+| AI document text extraction | ✅ Done |
+| Contact form + admin panel | ✅ Done |
+| Semantic search (pgvector + ONNX) | ✅ Done |
+| RAG pipeline | ✅ Done |
+| Production Docker + Render deploy | ✅ Done |
+| Pagination on list endpoints | 🔜 Planned |
+| Automated tests | 🔜 Planned |
+| Mobile navigation | 🔜 Planned |

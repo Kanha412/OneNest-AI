@@ -5,6 +5,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>2a3a9703-1f8f-4bb3-b75f-1382c9b1b97b</UserSecretsId>
+    <!-- NU1903: SQLitePCLRaw.lib.e_sqlite3 2.1.11 vulnerability.
+         Pulled in transitively through OneNest.Infrastructure →
+         Microsoft.EntityFrameworkCore.Sqlite. SQLite is present for EF Core
+         migration tooling only; Npgsql (PostgreSQL) is the production provider. -->
+    <NoWarn>NU1903</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

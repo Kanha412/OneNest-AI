@@ -1,246 +1,209 @@
-# OneNest AI Infrastructure & Architecture
+# OneNest AI — Backend Infrastructure
 
-This document explains the backend architecture currently implemented in OneNest AI.
+How the backend is put together — architecture layers, dependency injection, AI integration, file storage, and embedding design.
 
-## High-Level Architecture
+---
 
-OneNest follows a layered design aligned with Clean Architecture principles:
+## Architecture overview
 
-```mermaid
-flowchart LR
-  UI[Angular Frontend] --> API[OneNest.API Controllers]
-  API --> APP[OneNest.Application Interfaces/DTOs]
-  APP --> INF[OneNest.Infrastructure Implementations]
-  INF --> DB[(PostgreSQL)]
-  INF --> FS[(File Storage)]
-  INF --> AI[(Gemini API)]
+OneNest follows Clean Architecture. Each layer has a clear responsibility:
+
+```
+OneNest.API              → HTTP endpoints, middleware, auth config
+      ↓ depends on
+OneNest.Application      → interfaces, DTOs, service contracts
+      ↓ depends on
+OneNest.Domain           → entities, enums — zero external dependencies
+      ↑ implemented by
+OneNest.Infrastructure   → EF Core, Gemini, ONNX, Supabase Storage, repositories
 ```
 
-## Layer Responsibilities
+The rule: outer layers depend on inner; inner layers never import outer ones.
 
-## `OneNest.API`
+---
 
-- Hosts HTTP endpoints/controllers
-- Configures middleware pipeline
-- Configures auth, CORS, OpenAPI/Swagger
-- Maps service exceptions to HTTP status codes
+## Layer responsibilities
 
-## `OneNest.Application`
+### OneNest.API
+- 15 controllers covering all feature areas
+- `Program.cs` — DI registration, middleware pipeline, auth/CORS/Swagger config
+- Exception → HTTP status code mapping
+- ForwardedHeaders middleware (trusts Render's TLS proxy)
 
-- DTO contracts
-- Service/repository/security/storage interfaces
-- Application-level service contracts and exceptions
+### OneNest.Application
+- All DTO records (request + response types)
+- Service interfaces (`IAuthService`, `IDocumentService`, `IRagService`, etc.)
+- Storage interface (`IFileStorageService`)
+- Embedding interface (`IEmbeddingProvider`)
+- Application-level exceptions (`AuthException`, etc.)
 
-## `OneNest.Domain`
+### OneNest.Domain
+- 14 entities: `User`, `Note`, `TaskItem`, `Expense`, `Document`, `Medicine`, `Appointment`, `MedicalRecord`, `MedicalReport`, `AIConversation`, `AIMessage`, `UserSettings`, `ContactMessage`, `EmbeddingRecord`
+- All enumerations: `TaskPriority`, `ExpenseCategory`, `TransactionType`, `DocumentCategory`, `AppointmentStatus`, `MedicineFoodTiming`, `MedicalReportCategory`, `MessageRole`, `ContactCategory`, `ContactStatus`
+- No NuGet package dependencies
 
-- Core entities (`User`, `TaskItem`, `Document`, `AIConversation`, etc.)
-- Domain enums (`TaskPriority`, `ExpenseCategory`, etc.)
+### OneNest.Infrastructure
+- `OneNestDbContext` — EF Core DbContext with 11 migrations
+- `EmbeddingRepository` — raw ADO.NET for pgvector operations (EF can't map `vector(N)` types natively)
+- `SupabaseFileStorageService` — file upload/download via Supabase Storage REST API
+- `LocalEmbeddingProvider` — ONNX inference (all-MiniLM-L6-v2, 384-dim, runs in-process)
+- `GeminiProvider` — AI chat and RAG generation
+- `RagService` — 9-step RAG pipeline
+- `TextChunker` — sentence-aware text splitting (1200-char chunks, 240-char overlap)
+- `SemanticIndexService` / `SemanticSearchService` / `BackfillService`
+- `AIConversationService` + `AIWorkspaceOrchestrator` + 5 workspace tools
+- `JwtTokenGenerator` + `CurrentUserService`
 
-## `OneNest.Infrastructure`
+---
 
-- EF Core DbContext
-- Repository implementations
-- Service implementations
-- Security implementations (`JwtTokenGenerator`, `CurrentUserService`)
-- AI provider and workspace orchestration
-- File storage implementation
-- Dependency injection composition root
+## Middleware pipeline (Program.cs order)
 
-## Dependency Injection Composition
+1. `UseForwardedHeaders` — reads `X-Forwarded-For`/`X-Forwarded-Proto` from Render proxy
+2. `UseHttpsRedirection`
+3. `UseCors` — env-driven allowed origins (`Cors__AllowedOrigins__*`)
+4. `UseAuthentication` — JWT Bearer validation
+5. `UseAuthorization` — `[Authorize]` / `[Authorize(Roles="Admin")]` enforcement
+6. `MapControllers`
 
-`AddInfrastructure(configuration)` wires:
+---
 
-- DbContext with Npgsql connection string
-- Repositories + services for Notes/Tasks/Expenses/Documents/Health/Auth/Settings/AI
-- `IFileStorageService` as singleton
-- JWT/security helpers (`IJwtTokenGenerator`, `ICurrentUserService`)
-- `IPasswordHasher<User>`
-- AI modules:
-  - `IAIProvider` -> `GeminiProvider` (HttpClient with `HttpClientHandler`, 30s timeout)
-  - `IAIWorkspacePlanner`
-  - `IAIWorkspaceOrchestrator`
-  - workspace tools (`tasks`, `expenses`, `notes`, `documents`, `health`)
-- Phase 8 — Semantic Search modules:
-  - `IEmbeddingProvider` -> `GeminiEmbeddingProvider` (singleton, owns its own `HttpClient`)
-  - `ITextChunker` -> `TextChunker` (singleton, stateless)
-  - `IEmbeddingRepository` -> `EmbeddingRepository`
-  - `ISemanticIndexService` -> `SemanticIndexService`
-  - `ISemanticSearchService` -> `SemanticSearchService`
-  - `IBackfillService` -> `BackfillService`
+## Authentication
 
-**Embedding provider selection** (`Embeddings:Provider` config key):
+- Tokens issued by `JwtTokenGenerator`. Claims: `sub` (userId), `nameidentifier` (userId), `email`, `role`, `jti`
+- Token lifetime: 7 days (configurable via `Jwt:ExpiryMinutes`)
+- `CurrentUserService` reads `ClaimTypes.NameIdentifier` from `HttpContext.User` — throws `UnauthorizedAccessException` if not authenticated
+- Passwords hashed with ASP.NET Core's `PasswordHasher<User>`
 
-| Value | Provider | Dimensions | Notes |
-|---|---|---|---|
-| `Gemini` (default) | `GeminiEmbeddingProvider` | 768 | Hosted, requires `AI:ApiKey` |
-| `Local` | `LocalEmbeddingProvider` | 384 | Offline ONNX (all-MiniLM-L6-v2), no API key |
+---
 
-## API Host Pipeline
+## AI integration
 
-Current pipeline in `Program.cs`:
+### Chat (Gemini)
 
-1. `AddInfrastructure(...)`
-2. Controllers + OpenAPI + Swagger configuration
-3. JWT Bearer authentication
-4. Authorization
-5. CORS policy for Angular local dev origin `http://localhost:4200`
-6. Middleware order:
-   - `UseHttpsRedirection`
-   - `UseCors`
-   - `UseAuthentication`
-   - `UseAuthorization`
-   - `MapControllers`
+- Provider: `GeminiProvider` → `gemini-2.5-flash`
+- 30 s HTTP timeout
+- Retry on 429 / 5xx: up to 3 attempts with 300–600 ms exponential backoff
+- Error mapping: auth failure → 400; rate limit → 429
 
-Swagger security scheme includes Bearer token support.
+### Embedding (local ONNX)
 
-## Authentication & Security Design
+- Provider: `LocalEmbeddingProvider`
+- Model: `all-MiniLM-L6-v2` INT8 quantized, ~22 MB
+- Output: 384-dimensional float vector
+- Runs in-process inside the Docker container — no network call, no API key, zero cost
+- Model downloaded and SHA256-verified at Docker build time; never downloaded at startup
 
-## JWT flow
+**Embedding provider is selected by config:**
 
-- Token issued by `JwtTokenGenerator`.
-- Claims include user id (`sub`, `nameidentifier`) and email.
-- Token lifetime is based on `Jwt:ExpiryMinutes` config.
-- API validates issuer/audience/lifetime/signature.
+| `Embeddings:Provider` | Provider class | Dimensions |
+|---|---|---|
+| `Local` (default/recommended) | `LocalEmbeddingProvider` | 384 |
+| `Gemini` (alternate) | `GeminiEmbeddingProvider` | 768 |
 
-## Current user resolution
+For production, use `Local` — it's free and works offline.
 
-- `CurrentUserService` reads `ClaimTypes.NameIdentifier` from `HttpContext.User`.
-- Throws `UnauthorizedAccessException` when no authenticated user is available.
+### Text chunker
 
-## Password handling
+Splits long text into overlapping chunks before embedding:
 
-- Uses ASP.NET Core `PasswordHasher<User>`.
-- Auth service performs register/login/change-password/delete-account checks.
-
-## Persistence: Repositories + Services
-
-Pattern used consistently:
-
-- Controllers depend on service interfaces.
-- Services apply domain and business rules.
-- Repositories isolate EF/database access.
-
-This keeps API transport logic thin and business rules concentrated in services.
-
-## File Storage Integration
-
-- `FileStorageService` registered as singleton through `IFileStorageService`.
-- Document and medical-report modules persist metadata in DB and files in storage.
-- API supports single-file download/preview and bulk document ZIP download.
-
-## AI Integration Design
-
-## Chat Provider
-
-- Active provider: **Gemini** (`GeminiProvider`)
-- Endpoint: Google Generative Language API
-- Model fallback when unset: `gemini-3.5-flash`
-- Retry behavior:
-  - Retries on 429/5xx/network timeout with backoff
-- Error mapping:
-  - Auth failure -> invalid operation message
-  - Rate-limit -> invalid operation message consumed by API -> 429
-
-## Embedding Provider (Phase 8)
-
-`GeminiEmbeddingProvider` owns its own `HttpClient` (static singleton pattern) to avoid the DI typed-factory/singleton mismatch.
-
-- **Endpoint:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent`
-- **Model:** `gemini-embedding-001`
-- **Output dimensions:** 768 (configured via `Embeddings:Dimension`)
-- **SSL handling in Development:** `HttpClientHandler.DangerousAcceptAnyServerCertificateValidator` to handle corporate SSL-inspection proxies (Zscaler). Production uses default `HttpClientHandler` with full certificate validation.
-- **On any failure:** returns `null` — CRUD operations are never blocked by embedding errors.
-
-## Text Chunker (Phase 8)
-
-`TextChunker` splits extracted text into overlapping chunks for embedding:
-
-| Config key | Default | Description |
+| Config key | Default | What it does |
 |---|---|---|
 | `TextChunker:ChunkSizeChars` | 1200 | Max characters per chunk |
-| `TextChunker:ChunkOverlapChars` | 240 | Overlap between consecutive chunks |
+| `TextChunker:ChunkOverlapChars` | 240 | Overlap between adjacent chunks |
 
-## Semantic Indexing Design (Phase 8)
+Sentence-aware: won't cut in the middle of a sentence.
 
-```mermaid
-flowchart TD
-  CRUD[Note / Document CRUD] --> SIS[SemanticIndexService.IndexAsync]
-  SIS -->|best-effort, silent on error| TC[TextChunker]
-  TC --> EP[IEmbeddingProvider.EmbedAsync]
-  EP --> ER[EmbeddingRepository.UpsertAsync]
-  ER --> PG[(PostgreSQL pgvector)]
+---
 
-  DEL[Note / Document Delete] --> SIS2[SemanticIndexService.DeleteIndexAsync]
-  SIS2 --> ER2[EmbeddingRepository.DeleteBySourceAsync]
-```
+## Semantic indexing flow
 
-- `SemanticIndexService` wraps all exceptions in a bare `catch {}` — indexing failures are logged at Warning level but never propagate to the caller. This is intentional: CRUD must never fail due to embedding unavailability.
-- `BackfillService` re-indexes all notes and documents for a given user. Safe to call multiple times (upsert semantics).
-- `EmbeddingRepository` uses raw ADO.NET (`Database.GetDbConnection()`) for all pgvector operations since EF Core cannot generate `vector(N)` column DDL or map float arrays to it without additional packages.
+When a note or document is created or updated:
 
-## Conversation service
+1. HTTP response is returned immediately (indexing never blocks the user)
+2. `Task.Run()` fires a background job in a new DI scope
+3. `SemanticIndexService` deletes old chunks for that source
+4. `TextChunker` splits the content into chunks
+5. `LocalEmbeddingProvider.EmbedAsync()` converts each chunk to `float[384]`
+6. `EmbeddingRepository.UpsertAsync()` saves to `EmbeddingRecords` (pgvector)
 
-`AIConversationService` currently handles:
+Any error in this chain is caught and logged at Warning — CRUD operations are never blocked by indexing failures.
 
-- Conversation CRUD-like operations (create, list, rename, archive, unarchive, soft-delete)
-- Message persistence
-- History truncation (`HistoryLimit = 20`)
-- System prompt generation with:
-  - user display context
-  - response style preference
-  - workspace context block
-- Context depth behavior:
-  - low depth compacts context
-  - medium/high keep fuller context
+When a note or document is deleted: `SemanticIndexService.DeleteIndexAsync()` removes all its embedding records.
 
-## Workspace-aware AI orchestration
+---
 
-```mermaid
-flowchart TD
-  P[User Prompt] --> PL[AIWorkspacePlanner]
-  P --> KW[Keyword CanHandle Matching]
-  PL --> SEL[Selected Tools <= 3]
-  KW --> SEL
-  SEL --> EXEC[Execute Workspace Tools]
-  EXEC --> CTX[Context Block]
-  CTX --> SYS[System Prompt Builder]
-  SYS --> GEM[GeminiProvider]
-  GEM --> RESP[Assistant Response]
-```
+## RAG pipeline (9 steps)
 
-- Planner uses the AI provider to return strict JSON tool selections.
-- Tool failures are isolated and do not block fallback AI response.
-- Response metadata (`usedWorkspaceData`, `responseMode`, `workspaceToolsUsed`) is embedded and exposed.
+Triggered by `POST /api/ai/rag` or when the AI assistant uses RAG context:
 
-## Exception-to-HTTP Mapping Patterns
+1. Validate query (non-empty, max 2000 chars)
+2. Embed query with `LocalEmbeddingProvider` → `float[384]`
+3. Cosine search in pgvector: `SELECT … ORDER BY embedding <=> @vec WHERE UserId = @userId`
+4. Filter by similarity threshold ≥ 0.70, deduplicate by (SourceType, SourceId), take topK
+5. Fetch source text from Notes or Documents table
+6. XML-escape source content (protection against prompt injection)
+7. Assemble system prompt: sources block + conversation history (last 10 messages) + user query
+8. Call Gemini with retry (max 3×, 300–600 ms backoff on 429/5xx)
+9. Return `RagResponse { Answer, Sources[], HasSources, Model, Timestamp }`
 
-- `AuthException`
-  - register -> `409`
-  - login -> `401`
-  - change-password/delete-account -> `400`
-- `InvalidOperationException`
-  - many business-rule errors -> `400`
-  - AI rate limit text -> `429`
-- null/not-found outcomes -> `404` or `204` depending on operation semantics
+Config: `Rag:TopK=5`, `Rag:SimilarityThreshold=0.70`, `Rag:MaxContextCharacters=12000`, `Rag:MaxConversationMessages=10`
 
-## Clean Architecture Notes (Current State)
+---
 
-Implemented well:
+## Workspace-aware AI
 
-- Dependency inversion via interfaces in Application layer
-- API layer not directly coupled to EF DbContext
-- Infrastructure concerns isolated in infrastructure project
+When a user sends a chat message:
 
-Current pragmatic tradeoff:
+1. `AIWorkspaceOrchestrator` receives the prompt
+2. **Gemini Planner** (LLM call) selects relevant tools by name (JSON response)
+3. **Keyword matcher** (`CanHandle(prompt)`) also picks tools
+4. Union of both selections (no duplicates)
+5. Selected tools fetch live data from the DB:
+   - `NotesWorkspaceTool` — recent notes + count
+   - `TasksWorkspaceTool` — pending + overdue tasks
+   - `ExpensesWorkspaceTool` — income/expense summary
+   - `HealthWorkspaceTool` — active medicines + upcoming appointments
+   - `DocumentsWorkspaceTool` — document count + storage
+6. Context block is built with `[ToolName]` headers and compact data
+7. System prompt: user name + UTC datetime + context block + last 20 messages + response style
+8. Gemini generates the response
+9. Metadata (`usedWorkspaceData`, `workspaceToolsUsed`) is embedded as an HTML comment in the message content and persisted
 
-- Some ownership constraints are enforced at service/repository logic level rather than full FK graph constraints.
+Tool failures are silently ignored — partial context is always better than no response.
 
-## Planned Improvements
+---
 
-> Planned improvements are recommendations based on current implementation.
+## File storage
 
-- Add centralized exception-handling middleware for consistent error envelope across all controllers.
-- Add structured observability (correlation IDs, request logging, metrics) for production diagnostics.
-- Add explicit authorization policies/roles if multi-role scenarios are introduced.
-- Add resilience policies (circuit breaker, timeout policy) for external AI calls.
-- Add background processing for heavyweight jobs (bulk exports/imports, async reports).
+`IFileStorageService` → `SupabaseFileStorageService`
+
+- Files saved to Supabase private bucket: `onenest-documents`
+- Path pattern: `{userId}/{guid}{ext}`
+- Upload uses `x-upsert: true` header
+- Download returns a stream via presigned URL or direct API fetch
+- Used by: `DocumentService` and `MedicalReportService`
+
+Nothing is written to the container filesystem (which is ephemeral on Render).
+
+---
+
+## Exception → HTTP mapping
+
+| Exception type | Scenario | HTTP code |
+|---|---|---|
+| `AuthException` | Duplicate email on register | 409 |
+| `AuthException` | Bad password on login | 401 |
+| `AuthException` | Bad password on change/delete | 400 |
+| `InvalidOperationException` | Business rule failure | 400 |
+| `InvalidOperationException` | AI rate limit text | 429 |
+| null / not found | Resource not found | 404 or 204 |
+
+---
+
+## Things to improve (planned)
+
+- Add centralized exception middleware for a consistent error envelope (`{ code, message, details }`)
+- Add structured observability: correlation IDs, request logging, metrics
+- Add circuit breaker + timeout policies for Gemini calls
+- Add resilience policies for Supabase Storage calls
+- Add background processing infrastructure for bulk exports/imports

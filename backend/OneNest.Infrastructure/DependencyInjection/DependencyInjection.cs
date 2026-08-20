@@ -38,7 +38,11 @@ public static class DependencyInjection
         services.AddScoped<IDocumentRepository, DocumentRepository>();
         services.AddScoped<IDocumentTextExtractor, DocumentTextExtractor>();
         services.AddScoped<IDocumentService, DocumentService>();
-        services.AddSingleton<IFileStorageService, FileStorageService>();
+        // File storage backed by Supabase Storage (persists across Render restarts).
+        // Local FileStorageService wrote to the container filesystem which is
+        // ephemeral on Render — all uploaded files would be lost on every deploy/restart.
+        services.Configure<SupabaseOptions>(configuration.GetSection("Supabase"));
+        services.AddSingleton<IFileStorageService, SupabaseFileStorageService>();
 
         services.AddScoped<IMedicineRepository, MedicineRepository>();
         services.AddScoped<IMedicineService, MedicineService>();
