@@ -35,7 +35,6 @@ COPY OneNest.Domain/OneNest.Domain.csproj             OneNest.Domain/
 COPY OneNest.Application/OneNest.Application.csproj   OneNest.Application/
 COPY OneNest.Infrastructure/OneNest.Infrastructure.csproj OneNest.Infrastructure/
 COPY OneNest.API/OneNest.API.csproj                   OneNest.API/
-COPY OneNest.Tests/OneNest.Tests.csproj               OneNest.Tests/
 
 RUN dotnet restore OneNest.API/OneNest.API.csproj
 
