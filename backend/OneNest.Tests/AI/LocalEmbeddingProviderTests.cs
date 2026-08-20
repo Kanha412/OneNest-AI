@@ -180,9 +180,9 @@ public class LocalEmbeddingProviderTests
     {
         // Control characters (tab = \t, newline = \n stripped to one space boundary)
         var result = SanitizeTextInline("hello\x00world");  // null byte is Control
-        Assert.DoesNotContain("\x00", result);
-        Assert.Contains("hello", result);
-        Assert.Contains("world", result);
+        Assert.DoesNotContain("\x00", result, StringComparison.Ordinal);
+        Assert.Contains("hello", result, StringComparison.Ordinal);
+        Assert.Contains("world", result, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -272,7 +272,7 @@ public class LocalEmbeddingProviderTests
         {
             var cat = char.GetUnicodeCategory(c);
             if (c < ' '   // U+0000–U+001F ASCII control characters (explicit — GetUnicodeCategory('\x00') is unreliable)
-             || c == '' // U+007F DEL
+             || c == '\x7F' // U+007F DEL
              || cat is System.Globalization.UnicodeCategory.Control
                      or System.Globalization.UnicodeCategory.Surrogate
                      or System.Globalization.UnicodeCategory.PrivateUse
