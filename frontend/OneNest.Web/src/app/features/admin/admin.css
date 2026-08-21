@@ -231,8 +231,33 @@
 }
 
 .role-btn {
-  font-size: 0.8rem;
-  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.85rem;
+  border-radius: var(--radius, 6px);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+
+  /* Default: Make Admin — primary colour */
+  background: var(--primary, #4f46e5);
+  color: #fff;
+}
+
+.role-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.role-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Revoke Admin — danger colour */
+.role-btn.danger {
+  background: var(--danger, #ef4444);
+  color: #fff;
 }
 
 /* Status & role badges */

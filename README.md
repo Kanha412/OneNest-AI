@@ -13,41 +13,76 @@ Built with **Angular 22** (frontend), **ASP.NET Core .NET 10** (backend), and **
 
 ## Screenshots
 
-### Login
-![Login](assets/screenshots/01-login.png)
-
-### Register
-![Register](assets/screenshots/02-register.png)
+### Auth
+<table><tr>
+<td align="center" width="50%"><img src="assets/screenshots/01-login.png" alt="Login" width="100%"/><br/><sub><b>Login</b></sub></td>
+<td align="center" width="50%"><img src="assets/screenshots/02-register.png" alt="Register" width="100%"/><br/><sub><b>Register</b></sub></td>
+</tr></table>
 
 ### Dashboard
-![Dashboard](assets/screenshots/03-dashboard.png)
+<table><tr>
+<td align="center" width="50%"><img src="assets/screenshots/03-dasboard-1.png" alt="Dashboard 1" width="100%"/></td>
+<td align="center" width="50%"><img src="assets/screenshots/03-dasboard-2.png" alt="Dashboard 2" width="100%"/></td>
+</tr><tr>
+<td align="center" width="50%"><img src="assets/screenshots/03-dasboard-3.png" alt="Dashboard 3" width="100%"/></td>
+<td align="center" width="50%"><img src="assets/screenshots/03-dasboard-4.png" alt="Dashboard 4" width="100%"/></td>
+</tr></table>
 
 ### Notes
-![Notes](assets/screenshots/04-notes.png)
+<table><tr>
+<td align="center" width="50%"><img src="assets/screenshots/04-notes-1.png" alt="Notes 1" width="100%"/></td>
+<td align="center" width="50%"><img src="assets/screenshots/04-notes-2.png" alt="Notes 2" width="100%"/></td>
+</tr></table>
 
 ### Tasks
-![Tasks](assets/screenshots/05-tasks.png)
+<table><tr>
+<td align="center" width="50%"><img src="assets/screenshots/05-tasks-1.png" alt="Tasks 1" width="100%"/></td>
+<td align="center" width="50%"><img src="assets/screenshots/05-tasks-2.png" alt="Tasks 2" width="100%"/></td>
+</tr></table>
 
 ### Expenses
-![Expenses](assets/screenshots/06-expenses.png)
+<table><tr>
+<td align="center" width="50%"><img src="assets/screenshots/06-expenses-1.png" alt="Expenses 1" width="100%"/></td>
+<td align="center" width="50%"><img src="assets/screenshots/06-expenses-2.png" alt="Expenses 2" width="100%"/></td>
+</tr></table>
 
-### Documents
-![Documents](assets/screenshots/07-documents.png)
+### Documents &nbsp;|&nbsp; AI Assistant &nbsp;|&nbsp; Semantic Search
+<table><tr>
+<td align="center" width="33%"><img src="assets/screenshots/07-documents.png" alt="Documents" width="100%"/><br/><sub><b>Documents</b></sub></td>
+<td align="center" width="33%"><img src="assets/screenshots/09-ai-assistant.png" alt="AI Assistant" width="100%"/><br/><sub><b>AI Assistant</b></sub></td>
+<td align="center" width="33%"><img src="assets/screenshots/10-semantic-search.png" alt="Semantic Search" width="100%"/><br/><sub><b>Semantic Search</b></sub></td>
+</tr></table>
 
 ### Health Hub
-![Health Hub](assets/screenshots/08-health.png)
-
-### AI Assistant
-![AI Assistant](assets/screenshots/09-ai-assistant.png)
-
-### Semantic Search
-![Semantic Search](assets/screenshots/10-semantic-search.png)
+<table><tr>
+<td align="center" width="50%"><img src="assets/screenshots/08-health-1.png" alt="Health 1" width="100%"/></td>
+<td align="center" width="50%"><img src="assets/screenshots/08-health-2.png" alt="Health 2" width="100%"/></td>
+</tr><tr>
+<td align="center" width="50%"><img src="assets/screenshots/08-health-3.png" alt="Health 3" width="100%"/></td>
+<td align="center" width="50%"><img src="assets/screenshots/08-health-4.png" alt="Health 4" width="100%"/></td>
+</tr></table>
 
 ### Settings
-![Settings](assets/screenshots/11-settings.png)
+<table><tr>
+<td align="center" width="33%"><img src="assets/screenshots/12-settings-1.png" alt="Settings 1" width="100%"/></td>
+<td align="center" width="33%"><img src="assets/screenshots/12-settings-2.png" alt="Settings 2" width="100%"/></td>
+<td align="center" width="33%"><img src="assets/screenshots/12-settings-3.png" alt="Settings 3" width="100%"/></td>
+</tr><tr>
+<td align="center" width="33%"><img src="assets/screenshots/12-settings-4.png" alt="Settings 4" width="100%"/></td>
+<td align="center" width="33%"><img src="assets/screenshots/12-settings-5.png" alt="Settings 5" width="100%"/></td>
+<td></td>
+</tr></table>
 
-### Admin Panel
-![Admin Panel](assets/screenshots/12-admin.png)
+### Admin Panel &nbsp;|&nbsp; Contact &nbsp;|&nbsp; Privacy &amp; Terms
+<table><tr>
+<td align="center" width="50%"><img src="assets/screenshots/15-admin-1.png" alt="Admin 1" width="100%"/></td>
+<td align="center" width="50%"><img src="assets/screenshots/15-admin-2.png" alt="Admin 2" width="100%"/></td>
+</tr></table>
+<table><tr>
+<td align="center" width="33%"><img src="assets/screenshots/11-contact.png" alt="Contact" width="100%"/><br/><sub><b>Contact</b></sub></td>
+<td align="center" width="33%"><img src="assets/screenshots/13-privacy.png" alt="Privacy Policy" width="100%"/><br/><sub><b>Privacy Policy</b></sub></td>
+<td align="center" width="33%"><img src="assets/screenshots/14-terms.png" alt="Terms of Service" width="100%"/><br/><sub><b>Terms of Service</b></sub></td>
+</tr></table>
 
 ---
 
@@ -84,7 +119,7 @@ Built with **Angular 22** (frontend), **ASP.NET Core .NET 10** (backend), and **
 | Frontend | Angular 22, TypeScript, Angular Signals, Chart.js |
 | Backend | ASP.NET Core .NET 10, Clean Architecture, EF Core |
 | Database | PostgreSQL (Supabase), pgvector extension |
-| AI Chat | Google Gemini (`gemini-2.5-flash`) |
+| AI Chat | Google Gemini (`gemini-3.6-flash`) |
 | Embeddings | ONNX local model (`all-MiniLM-L6-v2`, 384-dim, ~22 MB, runs in-process) |
 | File Storage | Supabase Storage (private S3 bucket) |
 | Auth | JWT Bearer tokens |
