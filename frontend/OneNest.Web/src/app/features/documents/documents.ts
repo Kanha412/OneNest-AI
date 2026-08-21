@@ -293,8 +293,14 @@ export class Documents implements OnInit {
         const link = document.createElement('a');
         link.href = url;
         link.download = doc.originalFileName;
+        // Must be in the live DOM for programmatic click to trigger a download
+        // in all browsers (including sandboxed / deployed environments).
+        document.body.appendChild(link);
         link.click();
-        URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+        // Delay revocation so the browser has time to read the blob data
+        // before the object URL is destroyed.
+        setTimeout(() => URL.revokeObjectURL(url), 150);
       },
       error: () => this.toastService.error('Failed to download document')
     });
